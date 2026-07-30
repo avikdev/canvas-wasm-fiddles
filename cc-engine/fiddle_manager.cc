@@ -7,7 +7,8 @@
 
 #include "fiddles/orbital_bloom_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
-#include "fiddles/skia_pulse_fiddle.h"
+#include "fiddles/skia_cpu_fiddle.h"
+#include "fiddles/skia_webgl_fiddle.h"
 
 namespace {
 
@@ -19,24 +20,30 @@ std::unique_ptr<FiddleBase> CreateRibbonField() {
   return std::make_unique<RibbonFieldFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateSkiaPulse() {
-  return std::make_unique<SkiaPulseFiddle>();
+std::unique_ptr<FiddleBase> CreateSkiaWebGl() {
+  return std::make_unique<SkiaWebGlFiddle>();
 }
 
-}  // namespace
+std::unique_ptr<FiddleBase> CreateSkiaCpu() {
+  return std::make_unique<SkiaCpuFiddle>();
+}
+
+} // namespace
 
 FiddleManager::FiddleManager(emscripten::val canvas,
-                             const std::string& initial_key)
+                             const std::string &initial_key)
     : canvas_(std::move(canvas)) {
   registry_.Register("orbital-bloom", &CreateOrbitalBloom);
   registry_.Register("ribbon-field", &CreateRibbonField);
-  registry_.Register("skia-pulse", &CreateSkiaPulse);
+  registry_.Register("skia-webgl", &CreateSkiaWebGl);
+  registry_.Register("skia-cpu", &CreateSkiaCpu);
 
   width_ = canvas_["width"].as<double>();
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "orbital-bloom, ribbon-field, and skia-pulse." << std::endl;
+            << "orbital-bloom, ribbon-field, skia-webgl, and skia-cpu."
+            << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
 
@@ -45,11 +52,10 @@ FiddleManager::FiddleManager(emscripten::val canvas,
   }
 }
 
-bool FiddleManager::SelectFiddle(const std::string& key) {
+bool FiddleManager::SelectFiddle(const std::string &key) {
   std::unique_ptr<FiddleBase> next_fiddle = registry_.Create(key);
   if (next_fiddle == nullptr) {
-    std::cerr << "[cc-engine/stderr] Unknown fiddle key: " << key
-              << std::endl;
+    std::cerr << "[cc-engine/stderr] Unknown fiddle key: " << key << std::endl;
     return false;
   }
 

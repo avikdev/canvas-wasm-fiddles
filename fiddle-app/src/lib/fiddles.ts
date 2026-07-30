@@ -31,12 +31,22 @@ export const fiddles = [
     icon: Waves,
   },
   {
-    id: "skia-pulse",
+    id: "skia-webgl",
     number: "003",
-    title: "Skia pulse",
-    summary: "Skia Graphite records an animated field directly into the WebGPU canvas texture.",
-    technique: "Skia Graphite · WebGPU",
+    title: "Skia WebGL pulse",
+    summary: "Skia Ganesh draws an animated field directly into the WebGL canvas framebuffer.",
+    technique: "Skia Ganesh · WebGL 2",
     color: "#7de2ba",
+    icon: Shapes,
+  },
+  {
+    id: "skia-cpu",
+    number: "004",
+    title: "Skia CPU pulse",
+    summary:
+      "The identical Skia pulse scene rasterizes on the CPU, then uploads its Wasm pixel buffer to the 2D canvas.",
+    technique: "Skia Raster · CPU + putImageData",
+    color: "#f2b5d4",
     icon: Shapes,
   },
 ] as const satisfies readonly Fiddle[];

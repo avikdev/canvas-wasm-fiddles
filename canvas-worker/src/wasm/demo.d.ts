@@ -14,7 +14,6 @@ export interface CanvasDemoModule {
 export interface CanvasDemoModuleOptions {
   print?(message: string): void;
   printErr?(message: string): void;
-  preinitializedWebGPUDevice?: unknown;
 }
 
 export default function CreateCanvasDemoModule(

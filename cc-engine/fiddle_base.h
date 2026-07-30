@@ -3,23 +3,23 @@
 #include <emscripten/val.h>
 
 class FiddleBase {
- public:
+public:
   virtual ~FiddleBase() = default;
 
-  void PopulateCanvas(const emscripten::val& canvas);
+  void PopulateCanvas(const emscripten::val &canvas);
   void Resize(double width, double height, double device_pixel_ratio);
 
   virtual void Render(double time_seconds) = 0;
 
- protected:
-  virtual bool UsesWebGpu() const;
+protected:
+  virtual bool UsesWebGl() const;
 
-  emscripten::val& Canvas();
-  emscripten::val& Context();
+  emscripten::val &Canvas();
+  emscripten::val &Context();
   double Width() const;
   double Height() const;
 
- private:
+private:
   void RefreshDimensions();
 
   emscripten::val canvas_ = emscripten::val::undefined();

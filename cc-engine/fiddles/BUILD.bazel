@@ -25,16 +25,56 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_pulse_fiddle",
-    srcs = ["skia_pulse_fiddle.cc"],
-    hdrs = ["skia_pulse_fiddle.h"],
+    name = "skia_pulse_benchmark",
+    srcs = ["skia_pulse_benchmark.cc"],
+    hdrs = ["skia_pulse_benchmark.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
+    name = "skia_pulse_scene",
+    srcs = ["skia_pulse_scene.cc"],
+    hdrs = ["skia_pulse_scene.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = ["@skia//:core"],
+)
+
+cc_library(
+    name = "skia_webgl_fiddle",
+    srcs = ["skia_webgl_fiddle.cc"],
+    hdrs = ["skia_webgl_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
         "//:fiddle_base",
-        "//graphics:graphite_canvas_context",
+        ":skia_pulse_benchmark",
+        ":skia_pulse_scene",
+        "//graphics:webgl_canvas_context",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "skia_cpu_fiddle",
+    srcs = ["skia_cpu_fiddle.cc"],
+    hdrs = ["skia_cpu_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        ":skia_pulse_benchmark",
+        ":skia_pulse_scene",
+        "//graphics:raster_canvas_context",
         "@skia//:core",
     ],
 )

@@ -84,7 +84,13 @@ let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId) ?? fi
       <p>{selected.summary}</p>
       <div>
         <span>Renderer</span>
-        <strong>{selected.id === "skia-pulse" ? "Skia Graphite / WebGPU" : "OffscreenCanvas / 2D"}</strong>
+        <strong>
+          {selected.id === "skia-webgl"
+            ? "Skia Ganesh / WebGL"
+            : selected.id === "skia-cpu"
+              ? "Skia Raster / CPU"
+              : "OffscreenCanvas / 2D"}
+        </strong>
       </div>
       <div>
         <span>Thread</span>

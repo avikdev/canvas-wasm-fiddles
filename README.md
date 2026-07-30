@@ -18,5 +18,13 @@ Build the standalone Wasm demo separately:
 
 ```sh
 cd cc-engine
-bazel build //:demo_wasm
+./scripts/build-and-export.sh
 ```
+
+Select **Skia WebGL pulse** in the app to run the native Skia Ganesh demo.
+Skia wraps the WebGL canvas framebuffer as a GPU-backed `SkSurface` and draws
+to it without a Wasm pixel buffer or a 2D-canvas upload.
+
+Select **Skia CPU pulse** to run the exact same Skia draw function against a
+raster `SkSurface`. Both variants report aligned `surface`, `scene-draw`, and
+`present` timings every 120 frames.

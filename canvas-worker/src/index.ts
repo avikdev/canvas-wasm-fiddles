@@ -1,4 +1,9 @@
-export const fiddleIds = ["orbital-bloom", "ribbon-field", "skia-pulse"] as const;
+export const fiddleIds = [
+  "orbital-bloom",
+  "ribbon-field",
+  "skia-webgl",
+  "skia-cpu",
+] as const;
 
 export type FiddleId = (typeof fiddleIds)[number];
 

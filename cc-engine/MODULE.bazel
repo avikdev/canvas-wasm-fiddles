@@ -14,8 +14,6 @@ git_override(
     module_name = "skia",
     remote = "https://github.com/google/skia.git",
     commit = "c5c3399b3a8483f04f6d302630de2402e59b5b46",
-    patches = ["//:third_party/skia_graphite_dawn.patch"],
-    patch_strip = 1,
 )
 
 bazel_dep(name = "skia_user_config", version = "1.0")
@@ -33,5 +31,4 @@ use_repo(
     skia_deps,
     "libpng",
     "zlib",
-    "dawn",
 )

@@ -46,7 +46,8 @@ cc_library(
         ":fiddle_registry",
         "//fiddles:orbital_bloom_fiddle",
         "//fiddles:ribbon_field_fiddle",
-        "//fiddles:skia_pulse_fiddle",
+        "//fiddles:skia_cpu_fiddle",
+        "//fiddles:skia_webgl_fiddle",
     ],
 )
 
@@ -61,8 +62,8 @@ cc_binary(
         "-s EXPORT_ES6=1",
         "-s USE_ES6_IMPORT_META=1",
         "-s ENVIRONMENT=web,worker",
-        "-s USE_WEBGPU=1",
-        "-s EXPORTED_RUNTIME_METHODS=WebGPU,JsValStore",
+        "-s MAX_WEBGL_VERSION=2",
+        "-s USE_WEBGL2=1",
         "-s ALLOW_MEMORY_GROWTH=1",
         "-s EXPORT_NAME=CreateCanvasDemoModule",
         "-s ASSERTIONS=1",

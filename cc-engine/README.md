@@ -18,9 +18,13 @@ The loader exports an async `CreateCanvasDemoModule` factory. The initialized
 module exposes `FiddleManager`, which owns the OffscreenCanvas, fiddle
 registry, active fiddle, and animation time.
 
-See [SKIA_CANVAS_WIRING.md](SKIA_CANVAS_WIRING.md) for the native Skia raster
-surface, Wasm pixel-memory, OffscreenCanvas presentation path, and the boundary
-for a future Graphite/WebGPU backend.
+See [SKIA_WEBGL_WIRING.md](SKIA_WEBGL_WIRING.md) for the native Skia
+Ganesh/WebGL context, the GPU-backed on-screen `SkSurface`, and the exact
+zero-CPU-copy boundary.
+
+See [SKIA_PULSE_BENCHMARK.md](SKIA_PULSE_BENCHMARK.md) for the matched
+WebGL/CPU benchmark, timing semantics, and the source-level inspection of the
+Ganesh flush and submit path.
 
 To build and export the JavaScript loader and Wasm binary into the worker
 package:
