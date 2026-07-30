@@ -3,6 +3,7 @@ export const fiddleIds = [
   "ribbon-field",
   "skia-webgl",
   "skia-cpu",
+  "elastic-text",
 ] as const;
 
 export type FiddleId = (typeof fiddleIds)[number];

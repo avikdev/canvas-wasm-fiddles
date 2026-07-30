@@ -1,0 +1,27 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+genrule(
+    name = "skia_default_font_data",
+    srcs = ["@skia//resources:fonts/Roboto-Regular.ttf"],
+    outs = ["skia_default_font_data.cc"],
+    cmd = "xxd -i -n kSkiaDefaultFont $(location @skia//resources:fonts/Roboto-Regular.ttf) $@",
+)
+
+cc_library(
+    name = "skia_font_manager",
+    srcs = [
+        "skia_font_manager.cc",
+        ":skia_default_font_data",
+    ],
+    hdrs = ["skia_font_manager.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@skia//:core",
+        "@skia//:fontmgr_data_freetype",
+    ],
+)

@@ -12,6 +12,19 @@ let animationFrame = 0;
 let previousFrameTime: number | undefined;
 let didReportFirstFrame = false;
 
+const externalFonts = [
+  {
+    id: "ibm-plex-mono",
+    label: "IBM Plex Mono",
+    url: "/fonts/ibm-plex-mono/ibm-plex-mono-regular.woff2",
+  },
+  {
+    id: "public-sans",
+    label: "Public Sans",
+    url: "/fonts/public-sans/public-sans-regular.woff2",
+  },
+] as const;
+
 function describeError(error: unknown) {
   if (error instanceof Error) {
     return `${error.name}: ${error.message}${error.stack ? `\n${error.stack}` : ""}`;
@@ -35,6 +48,26 @@ async function createWasmModule() {
     print: (message) => reportLog(message),
     printErr: (message) => self.postMessage({ type: "error", message }),
   });
+}
+
+async function loadExternalFonts(wasmModule: Awaited<ReturnType<typeof createWasmModule>>) {
+  await Promise.all(
+    externalFonts.map(async (font) => {
+      try {
+        const response = await fetch(font.url);
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`);
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (!wasmModule.loadFont(font.id, bytes)) {
+          throw new Error("Skia could not decode the font data.");
+        }
+        reportLog(`Loaded external font ${font.label} (${bytes.byteLength} bytes).`);
+      } catch (error) {
+        reportError(new Error(`Could not load ${font.label}: ${describeError(error)}`));
+      }
+    }),
+  );
 }
 
 function render(now: number) {
@@ -64,6 +97,7 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     dpr = message.dpr;
 
     const wasmModule = await createWasmModule();
+    await loadExternalFonts(wasmModule);
     fiddleManager?.delete();
     fiddleManager = new wasmModule.FiddleManager(message.canvas, selectedFiddle);
     fiddleManager.resize(width, height, dpr);

@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 
+#include "fiddles/elastic_text_fiddle.h"
 #include "fiddles/orbital_bloom_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
 #include "fiddles/skia_cpu_fiddle.h"
@@ -28,6 +29,10 @@ std::unique_ptr<FiddleBase> CreateSkiaCpu() {
   return std::make_unique<SkiaCpuFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateElasticText() {
+  return std::make_unique<ElasticTextFiddle>();
+}
+
 } // namespace
 
 FiddleManager::FiddleManager(emscripten::val canvas,
@@ -37,12 +42,14 @@ FiddleManager::FiddleManager(emscripten::val canvas,
   registry_.Register("ribbon-field", &CreateRibbonField);
   registry_.Register("skia-webgl", &CreateSkiaWebGl);
   registry_.Register("skia-cpu", &CreateSkiaCpu);
+  registry_.Register("elastic-text", &CreateElasticText);
 
   width_ = canvas_["width"].as<double>();
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "orbital-bloom, ribbon-field, skia-webgl, and skia-cpu."
+            << "orbital-bloom, ribbon-field, skia-webgl, skia-cpu, and "
+               "elastic-text."
             << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;

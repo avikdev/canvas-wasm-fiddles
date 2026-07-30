@@ -1,0 +1,37 @@
+diff --git a/resources/BUILD.bazel b/resources/BUILD.bazel
+index d46f4e85d6..a3e9d22eab 100644
+--- a/resources/BUILD.bazel
++++ b/resources/BUILD.bazel
+@@ -23,6 +23,11 @@ exports_files(
+     ],
+ )
+ 
++exports_files(
++    ["fonts/Roboto-Regular.ttf"],
++    visibility = ["//visibility:public"],
++)
++
+ skia_filegroup(
+     name = "resources",
+     srcs = [
+diff --git a/bazel/external/freetype/BUILD.bazel b/bazel/external/freetype/BUILD.bazel
+index 2f0b844818..2595593976 100644
+--- a/bazel/external/freetype/BUILD.bazel
++++ b/bazel/external/freetype/BUILD.bazel
+@@ -11,7 +11,7 @@ config_setting(
+ 
+ FREETYPE_PUBLIC_DEFINES = [
+     "FT_CONFIG_OPTION_SVG",
+-    # FT_CONFIG_OPTION_USE_BROTLI TODO(kjlubick)
++    "FT_CONFIG_OPTION_USE_BROTLI",
+     "FT_CONFIG_OPTION_USE_ZLIB",
+     #FT_CONFIG_OPTION_SYSTEM_ZLIB TODO(bungeman)
+     "SK_FREETYPE_MINIMUM_RUNTIME_VERSION_IS_BUILD_VERSION",
+@@ -426,6 +426,7 @@ cc_library(
+     ],
+     visibility = ["//visibility:public"],
+     deps = [
++        "@brotli//:brotlidec",
+         "@libpng",  # TODO(kjlubick) add brotli option
+     ],
+ )

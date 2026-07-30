@@ -85,7 +85,7 @@ let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId) ?? fi
       <div>
         <span>Renderer</span>
         <strong>
-          {selected.id === "skia-webgl"
+          {selected.id === "skia-webgl" || selected.id === "elastic-text"
             ? "Skia Ganesh / WebGL"
             : selected.id === "skia-cpu"
               ? "Skia Raster / CPU"

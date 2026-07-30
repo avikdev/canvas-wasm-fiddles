@@ -44,6 +44,7 @@ cc_library(
     deps = [
         ":fiddle_base",
         ":fiddle_registry",
+        "//fiddles:elastic_text_fiddle",
         "//fiddles:orbital_bloom_fiddle",
         "//fiddles:ribbon_field_fiddle",
         "//fiddles:skia_cpu_fiddle",
@@ -56,7 +57,10 @@ cc_library(
 cc_binary(
     name = "demo",
     srcs = ["bindings.cc"],
-    deps = [":fiddle_manager"],
+    deps = [
+        ":fiddle_manager",
+        "//text:skia_font_manager",
+    ],
     linkopts = [
         "-s MODULARIZE=1",
         "-s EXPORT_ES6=1",

@@ -3,6 +3,25 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "elastic_text_fiddle",
+    srcs = ["elastic_text_fiddle.cc"],
+    hdrs = ["elastic_text_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "//utils:random_permutation",
+        "@skia//:core",
+        "@skia//:skparagraph_harfbuzz_skunicode",
+        "@skia//:skunicode_icu",
+    ],
+)
+
+cc_library(
     name = "orbital_bloom_fiddle",
     srcs = ["orbital_bloom_fiddle.cc"],
     hdrs = ["orbital_bloom_fiddle.h"],
