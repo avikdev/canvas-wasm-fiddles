@@ -1,0 +1,20 @@
+{
+  "name": "@canvas-wasm-fiddles/canvas-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./worker": "./dist/worker.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && bun run scripts/copy-wasm.ts",
+    "check": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0"
+  }
+}

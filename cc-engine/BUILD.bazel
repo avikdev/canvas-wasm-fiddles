@@ -1,0 +1,52 @@
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# This target intentionally has no main function. Emscripten turns it into the
+# JavaScript-loadable module below, and --no-entry allows that link mode.
+cc_binary(
+    name = "demo",
+    srcs = [
+        "bindings.cc",
+        "fiddle_base.cc",
+        "fiddle_base.h",
+        "fiddle_manager.cc",
+        "fiddle_manager.h",
+        "fiddle_registry.cc",
+        "fiddle_registry.h",
+        "fiddles/orbital_bloom_fiddle.cc",
+        "fiddles/orbital_bloom_fiddle.h",
+        "fiddles/ribbon_field_fiddle.cc",
+        "fiddles/ribbon_field_fiddle.h",
+    ],
+    features = ["emcc_debug_link"],
+    linkopts = [
+        "-s MODULARIZE=1",
+        "-s EXPORT_ES6=1",
+        "-s USE_ES6_IMPORT_META=1",
+        "-s ENVIRONMENT=web,worker",
+        "-s ALLOW_MEMORY_GROWTH=1",
+        "-s EXPORT_NAME=CreateCanvasDemoModule",
+        "-s ASSERTIONS=1",
+        "--bind",
+        "--closure=0",
+        "--no-entry",
+    ],
+    tags = ["manual"],
+)
+
+wasm_cc_binary(
+    name = "demo_wasm",
+    cc_target = ":demo",
+)
+
+js_binary(
+    name = "wasm_exporter",
+    data = [
+        ":demo_wasm",
+        "wasm_exporter.mjs",
+    ],
+    entry_point = "wasm_exporter.mjs",
+)

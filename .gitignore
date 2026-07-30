@@ -1,0 +1,19 @@
+# Don't publish personal notes.
+notes/
+
+# OS files: Mac, Windows
+.DS_Store
+
+# JavaScript
+node_modules/
+.turbo/
+dist/
+.svelte-kit/
+coverage/
+
+# Bazel
+bazel-*
+
+# Editors
+.idea/
+.vscode/

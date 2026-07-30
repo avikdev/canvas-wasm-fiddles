@@ -1,0 +1,8 @@
+module(
+    name = "canvas_wasm_cc_engine",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "aspect_rules_js", version = "3.0.3")
+bazel_dep(name = "emsdk", version = "4.0.17")

@@ -1,0 +1,21 @@
+{
+  "name": "canvas-wasm-fiddles",
+  "private": true,
+  "packageManager": "bun@1.2.19",
+  "workspaces": [
+    "canvas-worker",
+    "fiddle-app"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check": "turbo check",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "turbo": "latest",
+    "typescript": "^6.0.0"
+  }
+}

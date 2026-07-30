@@ -1,0 +1,28 @@
+{
+  "name": "@canvas-wasm-fiddles/fiddle-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@canvas-wasm-fiddles/canvas-worker": "workspace:*",
+    "clsx": "latest",
+    "lucide-svelte": "latest",
+    "svelte": "latest",
+    "tailwind-merge": "latest",
+    "tailwind-variants": "latest"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "latest",
+    "@tailwindcss/vite": "latest",
+    "svelte-check": "latest",
+    "tailwindcss": "latest",
+    "typescript": "^6.0.0",
+    "vite": "latest",
+    "vite-plugin-pwa": "latest"
+  }
+}

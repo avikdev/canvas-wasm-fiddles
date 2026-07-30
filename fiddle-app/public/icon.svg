@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Canvas Wasm Fiddles</title>
+  <rect width="512" height="512" rx="112" fill="#17201c"/>
+  <circle cx="256" cy="256" r="136" fill="none" stroke="#f6f3ea" stroke-opacity=".25" stroke-width="10"/>
+  <circle cx="256" cy="256" r="74" fill="none" stroke="#f6f3ea" stroke-opacity=".25" stroke-width="10"/>
+  <circle cx="256" cy="256" r="28" fill="#f6f3ea"/>
+  <circle cx="382" cy="256" r="34" fill="#c7f36b"/>
+  <circle cx="210" cy="192" r="24" fill="#ff8066"/>
+  <circle cx="185" cy="335" r="20" fill="#7de2ba"/>
+</svg>
