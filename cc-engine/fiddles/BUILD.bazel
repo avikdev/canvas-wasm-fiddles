@@ -1,0 +1,40 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "orbital_bloom_fiddle",
+    srcs = ["orbital_bloom_fiddle.cc"],
+    hdrs = ["orbital_bloom_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = ["//:fiddle_base"],
+)
+
+cc_library(
+    name = "ribbon_field_fiddle",
+    srcs = ["ribbon_field_fiddle.cc"],
+    hdrs = ["ribbon_field_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = ["//:fiddle_base"],
+)
+
+cc_library(
+    name = "skia_pulse_fiddle",
+    srcs = ["skia_pulse_fiddle.cc"],
+    hdrs = ["skia_pulse_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:graphite_canvas_context",
+        "@skia//:core",
+    ],
+)

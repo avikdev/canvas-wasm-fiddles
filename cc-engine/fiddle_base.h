@@ -12,6 +12,8 @@ class FiddleBase {
   virtual void Render(double time_seconds) = 0;
 
  protected:
+  virtual bool UsesWebGpu() const;
+
   emscripten::val& Canvas();
   emscripten::val& Context();
   double Width() const;

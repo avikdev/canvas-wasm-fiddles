@@ -7,6 +7,7 @@
 
 #include "fiddles/orbital_bloom_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
+#include "fiddles/skia_pulse_fiddle.h"
 
 namespace {
 
@@ -18,22 +19,30 @@ std::unique_ptr<FiddleBase> CreateRibbonField() {
   return std::make_unique<RibbonFieldFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateSkiaPulse() {
+  return std::make_unique<SkiaPulseFiddle>();
+}
+
 }  // namespace
 
-FiddleManager::FiddleManager(emscripten::val canvas)
+FiddleManager::FiddleManager(emscripten::val canvas,
+                             const std::string& initial_key)
     : canvas_(std::move(canvas)) {
   registry_.Register("orbital-bloom", &CreateOrbitalBloom);
   registry_.Register("ribbon-field", &CreateRibbonField);
+  registry_.Register("skia-pulse", &CreateSkiaPulse);
 
   width_ = canvas_["width"].as<double>();
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "orbital-bloom and ribbon-field." << std::endl;
+            << "orbital-bloom, ribbon-field, and skia-pulse." << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
 
-  SelectFiddle("orbital-bloom");
+  if (!SelectFiddle(initial_key)) {
+    SelectFiddle("orbital-bloom");
+  }
 }
 
 bool FiddleManager::SelectFiddle(const std::string& key) {

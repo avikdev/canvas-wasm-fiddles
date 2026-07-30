@@ -1,32 +1,68 @@
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
+
+config_setting(
+    name = "wasm_build",
+    constraint_values = [
+        "@platforms//cpu:wasm32",
+        "@platforms//os:emscripten",
+    ],
+)
+
+cc_library(
+    name = "fiddle_base",
+    srcs = ["fiddle_base.cc"],
+    hdrs = ["fiddle_base.h"],
+    target_compatible_with = select({
+        ":wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
+    name = "fiddle_registry",
+    srcs = ["fiddle_registry.cc"],
+    hdrs = ["fiddle_registry.h"],
+    target_compatible_with = select({
+        ":wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [":fiddle_base"],
+)
+
+cc_library(
+    name = "fiddle_manager",
+    srcs = ["fiddle_manager.cc"],
+    hdrs = ["fiddle_manager.h"],
+    target_compatible_with = select({
+        ":wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":fiddle_base",
+        ":fiddle_registry",
+        "//fiddles:orbital_bloom_fiddle",
+        "//fiddles:ribbon_field_fiddle",
+        "//fiddles:skia_pulse_fiddle",
+    ],
+)
 
 # This target intentionally has no main function. Emscripten turns it into the
 # JavaScript-loadable module below, and --no-entry allows that link mode.
 cc_binary(
     name = "demo",
-    srcs = [
-        "bindings.cc",
-        "fiddle_base.cc",
-        "fiddle_base.h",
-        "fiddle_manager.cc",
-        "fiddle_manager.h",
-        "fiddle_registry.cc",
-        "fiddle_registry.h",
-        "fiddles/orbital_bloom_fiddle.cc",
-        "fiddles/orbital_bloom_fiddle.h",
-        "fiddles/ribbon_field_fiddle.cc",
-        "fiddles/ribbon_field_fiddle.h",
-    ],
-    features = ["emcc_debug_link"],
+    srcs = ["bindings.cc"],
+    deps = [":fiddle_manager"],
     linkopts = [
         "-s MODULARIZE=1",
         "-s EXPORT_ES6=1",
         "-s USE_ES6_IMPORT_META=1",
         "-s ENVIRONMENT=web,worker",
+        "-s USE_WEBGPU=1",
+        "-s EXPORTED_RUNTIME_METHODS=WebGPU,JsValStore",
         "-s ALLOW_MEMORY_GROWTH=1",
         "-s EXPORT_NAME=CreateCanvasDemoModule",
         "-s ASSERTIONS=1",

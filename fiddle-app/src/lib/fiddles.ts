@@ -1,5 +1,5 @@
 import type { FiddleId } from "@canvas-wasm-fiddles/canvas-worker";
-import { Orbit, Waves } from "lucide-svelte";
+import { Orbit, Shapes, Waves } from "lucide-svelte";
 
 export type Fiddle = {
   id: FiddleId;
@@ -29,5 +29,14 @@ export const fiddles = [
     technique: "2D paths · oscillation",
     color: "#ff8066",
     icon: Waves,
+  },
+  {
+    id: "skia-pulse",
+    number: "003",
+    title: "Skia pulse",
+    summary: "Skia Graphite records an animated field directly into the WebGPU canvas texture.",
+    technique: "Skia Graphite · WebGPU",
+    color: "#7de2ba",
+    icon: Shapes,
   },
 ] as const satisfies readonly Fiddle[];

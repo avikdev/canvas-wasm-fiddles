@@ -10,7 +10,7 @@
 
 class FiddleManager {
  public:
-  explicit FiddleManager(emscripten::val canvas);
+  FiddleManager(emscripten::val canvas, const std::string& initial_key);
 
   bool SelectFiddle(const std::string& key);
   void Resize(double width, double height, double device_pixel_ratio);

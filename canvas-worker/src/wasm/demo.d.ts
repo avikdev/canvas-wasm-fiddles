@@ -7,13 +7,14 @@ export interface FiddleManager {
 
 export interface CanvasDemoModule {
   FiddleManager: {
-    new (canvas: OffscreenCanvas): FiddleManager;
+    new (canvas: OffscreenCanvas, initialKey: string): FiddleManager;
   };
 }
 
 export interface CanvasDemoModuleOptions {
   print?(message: string): void;
   printErr?(message: string): void;
+  preinitializedWebGPUDevice?: unknown;
 }
 
 export default function CreateCanvasDemoModule(

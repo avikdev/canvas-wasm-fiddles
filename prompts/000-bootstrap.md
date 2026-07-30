@@ -17,16 +17,18 @@ Use shadcn-svelte and sleek IP for the navigation. Only two panel : left nav and
 
 - Are the cpp functions `waveSample`, `multiply`, `version` actually used in JS ? If not, remove them.
 
-# C++ fiddle manager.
+## Granular Bazel build rules.
 
-Now move the fiddle engine inside C++. Define a class (with proper header.h and source .cc files) named `FiddleManager`. It will support:
-- Time tracking, increment time on every call.
-- Change fiddle. Select by same key as before.
+Create separate Bazel build rules (e.g. `cc_library`) for every complete C++ lib (pair of .h and .cc files). For every C++ directory have a dedicated `BUILD.bazel` file there, don't directly include sources (`srcs`) from child or other dirs.
 
-- Now the offscreen canvas is sent to the C++ wasm side. And C++ draws on it directly. Uses emscripten `val` getters to get the width, height, context etc from the canvas.
+## Skia fiddle Optimize
 
-- Fiddles are derived classes from a base class `FiddleBase`, which are all registered in a registry. The class supports populating a canvas JS object (emscripten).
+The Skia fiddle is too slow. Let's measure if the slowness is due to the graphics computation of copy the buffer from existing surface to the offcreen canvas or to the final context.
 
-- Define a class `FiddleRegistry` for registering fiddles using a string key, and a creator function pointer.
+Add timing computation in C++ for these core steps, and after every 10 steps, print in stdout (that'll come in the console) a combined line about these accumulated times in last 10 steps.
 
-- Worker now inits the fiddle manager in wasm at beginning / mount. Immediately activates the first fiddle. On change in selection, sends the new key.
+Question: Does it execute Skia's WebGPU backend like Canvaskit or the raster path ? Using WebGPU might need special emscripten build flags in bazel.
+
+-----
+
+The analysis has been running for a while now and its about time to wrap this up. If you're doing any deep analysis, finish the immediate search / step, try to leave the code in a functioning condition if you found one. Summary your findings in a separate MD file, so we can resume in future without wasting time on the things already explored.

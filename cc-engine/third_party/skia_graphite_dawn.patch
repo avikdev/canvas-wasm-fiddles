@@ -1,0 +1,128 @@
+diff --git a/BUILD.bazel b/BUILD.bazel
+index 7175026b16..27b8f8bd7d 100644
+--- a/BUILD.bazel
++++ b/BUILD.bazel
+@@ -111,6 +111,12 @@ alias(
+     visibility = ["//visibility:public"],
+ )
+ 
++alias(
++    name = "graphite_native_dawn",
++    actual = "//src/gpu/graphite/dawn:graphite_native_dawn",
++    visibility = ["//visibility:public"],
++)
++
+ ###
+ 
+ alias(
+diff --git a/bazel/external/dawn/BUILD.bazel b/bazel/external/dawn/BUILD.bazel
+index 454174e342..3489ab68c0 100644
+--- a/bazel/external/dawn/BUILD.bazel
++++ b/bazel/external/dawn/BUILD.bazel
+@@ -700,11 +700,14 @@ cc_library(
+ 
+ cc_library(
+     name = "dawn",
+     visibility = ["//visibility:public"],
+-    deps = [
+-        ":dawn_cpp",
+-        ":dawn_native",
+-        ":dawn_proc",
+-    ],
++    deps = select({
++        "@platforms//os:emscripten": [],
++        "//conditions:default": [
++            ":dawn_cpp",
++            ":dawn_native",
++            ":dawn_proc",
++        ],
++    }),
+ )
+ 
+ cc_library(
+diff --git a/src/gpu/graphite/dawn/BUILD.bazel b/src/gpu/graphite/dawn/BUILD.bazel
+index ec50e932df..49202130cc 100644
+--- a/src/gpu/graphite/dawn/BUILD.bazel
++++ b/src/gpu/graphite/dawn/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("//bazel:skia_rules.bzl", "split_srcs_and_hdrs")
++load("//bazel:skia_rules.bzl", "skia_cc_library", "split_srcs_and_hdrs")
+ 
+ package(
+     default_applicable_licenses = ["//:license"],
+@@ -40,3 +40,27 @@ split_srcs_and_hdrs(
+     name = "_dawn",
+     files = DAWN_FILES,
+ )
++
++skia_cc_library(
++    name = "graphite_native_dawn",
++    srcs = [
++        ":_dawn_hdrs",
++        ":_dawn_srcs",
++    ],
++    hdrs = [
++        "//include/gpu:shared_gpu_hdrs",
++        "//include/gpu/graphite:public_hdrs",
++        "//include/gpu/graphite/dawn:public_hdrs",
++        "//include/ports:core_foundation_hdrs",
++    ],
++    defines = ["SK_DAWN"],
++    visibility = ["//:__pkg__"],
++    deps = [
++        "//:core",
++        "//src/base",
++        "//src/core:core_priv",
++        "//src/gpu",
++        "//src/gpu/graphite",
++        "//src/sksl/codegen:wgsl",
++        "@dawn",
++    ],
++)
+diff --git a/include/gpu/graphite/dawn/BUILD.bazel b/include/gpu/graphite/dawn/BUILD.bazel
+index 17ccb831b2..a79887d903 100644
+--- a/include/gpu/graphite/dawn/BUILD.bazel
++++ b/include/gpu/graphite/dawn/BUILD.bazel
+@@ -13,4 +13,5 @@ skia_filegroup(
+         "DawnTypes.h",
+         "DawnUtils.h",
+     ],
++    visibility = ["//src/gpu/graphite/dawn:__pkg__"],
+ )
+diff --git a/src/gpu/graphite/BUILD.bazel b/src/gpu/graphite/BUILD.bazel
+index 5f167f585d..bdd12056e8 100644
+--- a/src/gpu/graphite/BUILD.bazel
++++ b/src/gpu/graphite/BUILD.bazel
+@@ -207,6 +207,7 @@ skia_cc_library(
+         "//src/gpu/graphite/mtl:__pkg__",
+         "//src/gpu/graphite/precompile:__pkg__",
+         "//src/gpu/graphite/vk:__pkg__",
++        "//src/gpu/graphite/dawn:__pkg__",
+     ],
+     deps = [
+         "//:core",
+diff --git a/src/gpu/graphite/dawn/DawnBuffer.cpp b/src/gpu/graphite/dawn/DawnBuffer.cpp
+index fce1966559..1017ff3bc7 100644
+--- a/src/gpu/graphite/dawn/DawnBuffer.cpp
++++ b/src/gpu/graphite/dawn/DawnBuffer.cpp
+@@ -187,7 +187,7 @@ DawnBuffer::DawnBuffer(const DawnSharedContext* sharedContext,
+                  // prepareForReturnToCache only needs to be called for a buffer that is mappable
+                  // for writing
+                  /* requiresPrepareForReturnToCache= */
+-                                                   fBuffer.GetUsage() & wgpu::BufferUsage::MapWrite
++                                                   buffer.GetUsage() & wgpu::BufferUsage::MapWrite)
+ #else
+                  /* requiresPrepareForReturnToCache= */ false)
+ #endif
+diff --git a/src/sksl/codegen/BUILD.bazel b/src/sksl/codegen/BUILD.bazel
+index 906b0c02d7..4c1c8242e0 100644
+--- a/src/sksl/codegen/BUILD.bazel
++++ b/src/sksl/codegen/BUILD.bazel
+@@ -191,6 +191,7 @@ skia_cc_library(
+     ],
+     features = ["layering_check"],
+     visibility = [
++        "//src/gpu/graphite/dawn:__pkg__",
+         "//tools/skslc:__pkg__",
+     ],
+     deps = [

@@ -1,4 +1,4 @@
-export const fiddleIds = ["orbital-bloom", "ribbon-field"] as const;
+export const fiddleIds = ["orbital-bloom", "ribbon-field", "skia-pulse"] as const;
 
 export type FiddleId = (typeof fiddleIds)[number];
 
@@ -20,4 +20,17 @@ export type CanvasWorkerMessage =
   | {
       type: "select";
       fiddle: FiddleId;
+    };
+
+export type CanvasWorkerStatus =
+  | {
+      type: "ready";
+    }
+  | {
+      type: "log";
+      message: string;
+    }
+  | {
+      type: "error";
+      message: string;
     };

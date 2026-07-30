@@ -75,14 +75,16 @@ let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId) ?? fi
     </header>
 
     <section class="canvas-wrap" aria-live="polite">
-      <CanvasStage fiddle={selected.id} />
+      {#key selected.id}
+        <CanvasStage fiddle={selected.id} />
+      {/key}
     </section>
 
     <footer class="fiddle-meta">
       <p>{selected.summary}</p>
       <div>
         <span>Renderer</span>
-        <strong>OffscreenCanvas / 2D</strong>
+        <strong>{selected.id === "skia-pulse" ? "Skia Graphite / WebGPU" : "OffscreenCanvas / 2D"}</strong>
       </div>
       <div>
         <span>Thread</span>

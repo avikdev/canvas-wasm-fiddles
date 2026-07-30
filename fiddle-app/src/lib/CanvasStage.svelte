@@ -1,5 +1,9 @@
 <script lang="ts">
-import type { CanvasWorkerMessage, FiddleId } from "@canvas-wasm-fiddles/canvas-worker";
+import type {
+  CanvasWorkerMessage,
+  CanvasWorkerStatus,
+  FiddleId,
+} from "@canvas-wasm-fiddles/canvas-worker";
 import CanvasWorker from "@canvas-wasm-fiddles/canvas-worker/worker?worker";
 import { onMount } from "svelte";
 
@@ -13,13 +17,6 @@ function send(message: CanvasWorkerMessage, transfer?: Transferable[]) {
   worker?.postMessage(message, transfer ?? []);
 }
 
-$effect(() => {
-  // Read the prop unconditionally so Svelte tracks it even before the worker
-  // is created during onMount.
-  const selectedFiddle = fiddle;
-  if (worker) send({ type: "select", fiddle: selectedFiddle });
-});
-
 onMount(() => {
   if (!canvasElement.transferControlToOffscreen) {
     supported = false;
@@ -27,7 +24,17 @@ onMount(() => {
   }
 
   worker = new CanvasWorker();
+  worker.addEventListener("message", (event: MessageEvent<CanvasWorkerStatus>) => {
+    if (event.data.type === "error") {
+      console.error(`[canvas-worker] ${event.data.message}`);
+    } else if (event.data.type === "ready") {
+      console.info("[canvas-worker] C++ renderer ready.");
+    } else {
+      console.info(`[canvas-worker] ${event.data.message}`);
+    }
+  });
   const offscreen = canvasElement.transferControlToOffscreen();
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 
   const resize = () => {
     const bounds = stageElement.getBoundingClientRect();
@@ -41,14 +48,23 @@ onMount(() => {
     return dimensions;
   };
 
+  const scheduleResize = () => {
+    if (resizeTimer !== undefined) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = undefined;
+      resize();
+    }, 150);
+  };
+
   const dimensions = resize();
   send({ type: "init", canvas: offscreen, fiddle, ...dimensions }, [offscreen]);
 
-  const observer = new ResizeObserver(resize);
+  const observer = new ResizeObserver(scheduleResize);
   observer.observe(stageElement);
 
   return () => {
     observer.disconnect();
+    if (resizeTimer !== undefined) clearTimeout(resizeTimer);
     worker?.terminate();
     worker = undefined;
   };
