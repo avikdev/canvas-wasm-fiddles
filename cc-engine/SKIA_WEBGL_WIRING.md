@@ -122,7 +122,7 @@ cd cc-engine
 ./scripts/build-and-export.sh
 ```
 
-Then run the app and select **Skia WebGL pulse**:
+Then run the app and select **Skia Drawing (WebGL)**:
 
 ```sh
 cd ..

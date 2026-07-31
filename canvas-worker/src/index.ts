@@ -4,6 +4,8 @@ export const fiddleIds = [
   "skia-webgl",
   "skia-cpu",
   "elastic-text",
+  "sksl-image-proc",
+  "shape-intersection",
 ] as const;
 
 export type FiddleId = (typeof fiddleIds)[number];
@@ -13,6 +15,7 @@ export type CanvasWorkerMessage =
       type: "init";
       canvas: OffscreenCanvas;
       fiddle: FiddleId;
+      assetBaseUrl: string;
       width: number;
       height: number;
       dpr: number;

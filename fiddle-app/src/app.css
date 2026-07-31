@@ -25,7 +25,7 @@
   --accent: #ece8dc;
   --accent-foreground: #17201c;
   --border: #d7d2c5;
-  --ring: #7de2ba;
+  --ring: #f6ad0a;
 }
 
 * {
@@ -63,7 +63,7 @@ a {
   height: 100vh;
   padding: 28px;
   color: #f6f3ea;
-  background: radial-gradient(circle at 85% 15%, rgb(125 226 186 / 12%), transparent 27%), #17201c;
+  background: radial-gradient(circle at 85% 15%, rgb(246 173 10 / 12%), transparent 27%), #17201c;
   border-right: 1px solid rgb(246 243 234 / 12%);
 }
 
@@ -79,7 +79,7 @@ a {
   height: 42px;
   place-items: center;
   color: #17201c;
-  background: #c7f36b;
+  background: #f6ad0a;
   border-radius: 12px;
   transform: rotate(-3deg);
 }
@@ -129,7 +129,7 @@ a {
 }
 
 .sidebar-copy .eyebrow {
-  color: #c7f36b;
+  color: #f6ad0a;
 }
 
 .sidebar-copy h1 {
@@ -170,8 +170,9 @@ a {
 }
 
 .fiddle-link {
+  position: relative;
   display: grid;
-  grid-template-columns: 28px 34px minmax(0, 1fr) 16px;
+  grid-template-columns: 34px minmax(0, 1fr) 16px;
   width: 100%;
   height: auto;
   min-height: 62px;
@@ -191,13 +192,17 @@ a {
   color: #f6f3ea;
   background: rgb(246 243 234 / 8%);
   border-color: rgb(246 243 234 / 12%);
-  box-shadow: inset 3px 0 0 #c7f36b;
 }
 
-.fiddle-number {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  opacity: 0.42;
+.fiddle-link.active::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 2px;
+  width: 3px;
+  background: #f6ad0a;
+  border-radius: 1px;
+  content: "";
 }
 
 .fiddle-icon {
@@ -206,6 +211,10 @@ a {
   height: 30px;
   place-items: center;
   color: #17201c;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
   background: var(--fiddle-color);
   border-radius: 9px;
 }
@@ -249,33 +258,25 @@ a {
 .sidebar-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: 28px;
   color: rgb(246 243 234 / 45%);
 }
 
-.sidebar-footer > span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.sidebar-footer i {
-  width: 6px;
-  height: 6px;
-  background: #7de2ba;
-  border-radius: 50%;
-  box-shadow: 0 0 0 4px rgb(125 226 186 / 10%);
-}
-
 .sidebar-footer a {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
   color: inherit;
   transition: color 160ms ease;
+}
+
+.sidebar-footer svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 
 .sidebar-footer a:hover {
@@ -296,34 +297,17 @@ a {
 
 .fiddle-header {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   padding-bottom: 24px;
 }
 
-.fiddle-header .eyebrow {
-  color: #658f55;
-}
-
 .fiddle-header h2 {
-  margin-top: 5px;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(32px, 4vw, 58px);
+  font-size: clamp(28px, 3.4vw, 50px);
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.05em;
-}
-
-.index-counter {
-  padding-bottom: 5px;
-  color: #676c68;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-}
-
-.index-counter span {
-  margin: 0 6px;
-  color: #b3b4ae;
 }
 
 .canvas-wrap {
@@ -338,10 +322,14 @@ a {
   overflow: hidden;
   background: #17201c;
   border: 1px solid #17201c;
-  border-radius: 3px 28px 3px 28px;
+  border-radius: 4px;
   box-shadow:
     0 2px 0 rgb(23 32 28 / 12%),
     0 24px 70px rgb(23 32 28 / 14%);
+}
+
+.canvas-stage.shape-intersection-stage {
+  background: #f4e8d2;
 }
 
 .canvas-stage::after {
@@ -359,29 +347,25 @@ a {
   min-height: 0;
 }
 
-.canvas-chip {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
+.render-chip {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 7px 10px;
-  color: rgb(246 243 234 / 72%);
+  color: #f6ad0a;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 8px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  background: rgb(23 32 28 / 55%);
-  border: 1px solid rgb(246 243 234 / 18%);
+  background: #17201c;
+  border: 1px solid rgb(246 173 10 / 45%);
   border-radius: 999px;
-  backdrop-filter: blur(8px);
 }
 
-.canvas-chip span {
+.render-chip span {
   width: 5px;
   height: 5px;
-  background: #c7f36b;
+  background: #f6ad0a;
   border-radius: 50%;
 }
 
@@ -471,7 +455,7 @@ a {
   }
 
   .fiddle-link {
-    grid-template-columns: 24px 30px minmax(0, 1fr);
+    grid-template-columns: 30px minmax(0, 1fr);
   }
 
   .fiddle-icon {

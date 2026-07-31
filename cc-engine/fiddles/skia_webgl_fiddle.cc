@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "fiddles/skia_pulse_scene.h"
+#include "fiddles/skia_drawing_builder.h"
 #include "graphics/webgl_canvas_context.h"
 #include "include/core/SkSurface.h"
 
@@ -58,7 +58,7 @@ void SkiaWebGlFiddle::Render(double time_seconds) {
   }
 
   const auto scene_start = TimingClock::now();
-  DrawSkiaPulseScene(surface->getCanvas(), width, height, time_seconds);
+  DrawSkiaDrawing(surface->getCanvas(), width, height, time_seconds);
   const double scene_draw_ms =
       ElapsedMilliseconds(scene_start, TimingClock::now());
 

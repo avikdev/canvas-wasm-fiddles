@@ -57,7 +57,16 @@ onMount(() => {
   };
 
   const dimensions = resize();
-  send({ type: "init", canvas: offscreen, fiddle, ...dimensions }, [offscreen]);
+  send(
+    {
+      type: "init",
+      canvas: offscreen,
+      fiddle,
+      assetBaseUrl: import.meta.env.BASE_URL,
+      ...dimensions,
+    },
+    [offscreen],
+  );
 
   const observer = new ResizeObserver(scheduleResize);
   observer.observe(stageElement);
@@ -71,15 +80,15 @@ onMount(() => {
 });
 </script>
 
-<div class="canvas-stage" bind:this={stageElement}>
+<div
+  class="canvas-stage"
+  class:shape-intersection-stage={fiddle === "shape-intersection"}
+  bind:this={stageElement}
+>
   <canvas bind:this={canvasElement} aria-label="Animated preview of the selected fiddle"></canvas>
   {#if !supported}
     <div class="unsupported">
       This browser cannot hand a canvas to a Web Worker. Try the latest Chrome, Edge, or Firefox.
     </div>
   {/if}
-  <div class="canvas-chip">
-    <span></span>
-    Worker rendering
-  </div>
 </div>

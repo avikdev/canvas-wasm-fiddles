@@ -8,8 +8,10 @@
 #include "fiddles/elastic_text_fiddle.h"
 #include "fiddles/orbital_bloom_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
+#include "fiddles/shape_intersection_fiddle.h"
 #include "fiddles/skia_cpu_fiddle.h"
 #include "fiddles/skia_webgl_fiddle.h"
+#include "fiddles/sksl_image_proc_fiddle.h"
 
 namespace {
 
@@ -33,6 +35,14 @@ std::unique_ptr<FiddleBase> CreateElasticText() {
   return std::make_unique<ElasticTextFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateSkslImageProc() {
+  return std::make_unique<SkslImageProcFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateShapeIntersection() {
+  return std::make_unique<ShapeIntersectionFiddle>();
+}
+
 } // namespace
 
 FiddleManager::FiddleManager(emscripten::val canvas,
@@ -43,13 +53,15 @@ FiddleManager::FiddleManager(emscripten::val canvas,
   registry_.Register("skia-webgl", &CreateSkiaWebGl);
   registry_.Register("skia-cpu", &CreateSkiaCpu);
   registry_.Register("elastic-text", &CreateElasticText);
+  registry_.Register("sksl-image-proc", &CreateSkslImageProc);
+  registry_.Register("shape-intersection", &CreateShapeIntersection);
 
   width_ = canvas_["width"].as<double>();
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "orbital-bloom, ribbon-field, skia-webgl, skia-cpu, and "
-               "elastic-text."
+            << "orbital-bloom, ribbon-field, skia-webgl, skia-cpu, "
+               "elastic-text, sksl-image-proc, and shape-intersection."
             << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;

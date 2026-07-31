@@ -7,6 +7,7 @@ export interface FiddleManager {
 
 export interface CanvasDemoModule {
   loadFont(fontId: string, bytes: Uint8Array): boolean;
+  loadImage(imageId: string, bytes: Uint8Array): boolean;
   FiddleManager: {
     new (canvas: OffscreenCanvas, initialKey: string): FiddleManager;
   };

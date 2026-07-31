@@ -1,5 +1,5 @@
-# Don't publish personal notes.
-notes/
+# Don't publish personal notes, prompts.
+prompts/
 
 # OS files: Mac, Windows
 .DS_Store

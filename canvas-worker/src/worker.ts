@@ -8,6 +8,7 @@ let selectedFiddle: FiddleId = "orbital-bloom";
 let width = 1;
 let height = 1;
 let dpr = 1;
+let assetBaseUrl = "/";
 let animationFrame = 0;
 let previousFrameTime: number | undefined;
 let didReportFirstFrame = false;
@@ -16,12 +17,20 @@ const externalFonts = [
   {
     id: "ibm-plex-mono",
     label: "IBM Plex Mono",
-    url: "/fonts/ibm-plex-mono/ibm-plex-mono-regular.woff2",
+    path: "fonts/ibm-plex-mono/ibm-plex-mono-regular.woff2",
   },
   {
     id: "public-sans",
     label: "Public Sans",
-    url: "/fonts/public-sans/public-sans-regular.woff2",
+    path: "fonts/public-sans/public-sans-regular.woff2",
+  },
+] as const;
+
+const externalImages = [
+  {
+    id: "/images/demoimage-01.jpg",
+    label: "Demo image 01",
+    path: "images/demoimage-01.jpg",
   },
 ] as const;
 
@@ -54,7 +63,7 @@ async function loadExternalFonts(wasmModule: Awaited<ReturnType<typeof createWas
   await Promise.all(
     externalFonts.map(async (font) => {
       try {
-        const response = await fetch(font.url);
+        const response = await fetch(`${assetBaseUrl}${font.path}`);
         if (!response.ok) {
           throw new Error(`${response.status} ${response.statusText}`);
         }
@@ -65,6 +74,26 @@ async function loadExternalFonts(wasmModule: Awaited<ReturnType<typeof createWas
         reportLog(`Loaded external font ${font.label} (${bytes.byteLength} bytes).`);
       } catch (error) {
         reportError(new Error(`Could not load ${font.label}: ${describeError(error)}`));
+      }
+    }),
+  );
+}
+
+async function loadExternalImages(wasmModule: Awaited<ReturnType<typeof createWasmModule>>) {
+  await Promise.all(
+    externalImages.map(async (image) => {
+      try {
+        const response = await fetch(`${assetBaseUrl}${image.path}`);
+        if (!response.ok) {
+          throw new Error(`${response.status} ${response.statusText}`);
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        if (!wasmModule.loadImage(image.id, bytes)) {
+          throw new Error("Skia could not decode the image data.");
+        }
+        reportLog(`Loaded image ${image.label} (${bytes.byteLength} bytes).`);
+      } catch (error) {
+        reportError(new Error(`Could not load ${image.label}: ${describeError(error)}`));
       }
     }),
   );
@@ -92,12 +121,13 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
 
   if (message.type === "init") {
     selectedFiddle = message.fiddle;
+    assetBaseUrl = message.assetBaseUrl;
     width = message.width;
     height = message.height;
     dpr = message.dpr;
 
     const wasmModule = await createWasmModule();
-    await loadExternalFonts(wasmModule);
+    await Promise.all([loadExternalFonts(wasmModule), loadExternalImages(wasmModule)]);
     fiddleManager?.delete();
     fiddleManager = new wasmModule.FiddleManager(message.canvas, selectedFiddle);
     fiddleManager.resize(width, height, dpr);

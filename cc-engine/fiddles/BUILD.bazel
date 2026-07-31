@@ -22,6 +22,39 @@ cc_library(
 )
 
 cc_library(
+    name = "sksl_image_proc_fiddle",
+    srcs = ["sksl_image_proc_fiddle.cc"],
+    hdrs = ["sksl_image_proc_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "//images:skia_image_store",
+        "//text:skia_font_manager",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "shape_intersection_fiddle",
+    srcs = ["shape_intersection_fiddle.cc"],
+    hdrs = ["shape_intersection_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_library(
     name = "orbital_bloom_fiddle",
     srcs = ["orbital_bloom_fiddle.cc"],
     hdrs = ["orbital_bloom_fiddle.h"],
@@ -54,9 +87,9 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_pulse_scene",
-    srcs = ["skia_pulse_scene.cc"],
-    hdrs = ["skia_pulse_scene.h"],
+    name = "skia_drawing_builder",
+    srcs = ["skia_drawing_builder.cc"],
+    hdrs = ["skia_drawing_builder.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -75,7 +108,7 @@ cc_library(
     deps = [
         "//:fiddle_base",
         ":skia_pulse_benchmark",
-        ":skia_pulse_scene",
+        ":skia_drawing_builder",
         "//graphics:webgl_canvas_context",
         "@skia//:core",
     ],
@@ -92,7 +125,7 @@ cc_library(
     deps = [
         "//:fiddle_base",
         ":skia_pulse_benchmark",
-        ":skia_pulse_scene",
+        ":skia_drawing_builder",
         "//graphics:raster_canvas_context",
         "@skia//:core",
     ],

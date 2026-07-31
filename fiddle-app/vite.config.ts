@@ -3,7 +3,10 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const repositoryBase = "/canvas-wasm-fiddles/";
+
 export default defineConfig({
+  base: repositoryBase,
   plugins: [
     tailwindcss(),
     svelte(),
@@ -20,10 +23,11 @@ export default defineConfig({
         theme_color: "#17201c",
         background_color: "#f6f3ea",
         display: "standalone",
-        start_url: "/",
+        start_url: repositoryBase,
+        scope: repositoryBase,
         icons: [
           {
-            src: "/icon.svg",
+            src: `${repositoryBase}icon.svg`,
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any maskable",

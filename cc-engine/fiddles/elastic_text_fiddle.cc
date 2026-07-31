@@ -41,21 +41,19 @@ constexpr int kAlignmentCount = 9;
 constexpr int kFontCount = 3;
 
 struct Alignment {
-  const char *vertical_name;
-  const char *horizontal_name;
   TextAlign horizontal;
 };
 
 constexpr std::array<Alignment, kAlignmentCount> kAlignments = {{
-    {"top", "left", TextAlign::kLeft},
-    {"top", "center", TextAlign::kCenter},
-    {"top", "right", TextAlign::kRight},
-    {"middle", "left", TextAlign::kLeft},
-    {"middle", "center", TextAlign::kCenter},
-    {"middle", "right", TextAlign::kRight},
-    {"bottom", "left", TextAlign::kLeft},
-    {"bottom", "center", TextAlign::kCenter},
-    {"bottom", "right", TextAlign::kRight},
+    {TextAlign::kLeft},
+    {TextAlign::kCenter},
+    {TextAlign::kRight},
+    {TextAlign::kLeft},
+    {TextAlign::kCenter},
+    {TextAlign::kRight},
+    {TextAlign::kLeft},
+    {TextAlign::kCenter},
+    {TextAlign::kRight},
 }};
 
 struct FontChoice {
@@ -85,6 +83,34 @@ float VerticalTextOffset(int alignment_index, float available_height,
 std::uint32_t CreateAlignmentSeed() {
   std::random_device random;
   return random();
+}
+
+void DrawAlignmentIcon(SkCanvas *canvas, const SkRect &bounds,
+                       int alignment_index) {
+  constexpr int kGridSize = 3;
+  const float cell_size = bounds.width() / static_cast<float>(kGridSize);
+  const int active_row = alignment_index / kGridSize;
+  const int active_column = alignment_index % kGridSize;
+
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kFill_Style);
+  paint.setColor(SK_ColorBLACK);
+  canvas->drawRect(SkRect::MakeXYWH(bounds.left() + active_column * cell_size,
+                                    bounds.top() + active_row * cell_size,
+                                    cell_size, cell_size),
+                   paint);
+
+  paint.setStyle(SkPaint::kStroke_Style);
+  paint.setStrokeWidth(1.0F);
+  canvas->drawRect(bounds, paint);
+  for (int divider = 1; divider < kGridSize; ++divider) {
+    const float offset = static_cast<float>(divider) * cell_size;
+    canvas->drawLine(bounds.left() + offset, bounds.top(),
+                     bounds.left() + offset, bounds.bottom(), paint);
+    canvas->drawLine(bounds.left(), bounds.top() + offset, bounds.right(),
+                     bounds.top() + offset, paint);
+  }
 }
 
 } // namespace
@@ -159,13 +185,19 @@ bool ElasticTextFiddle::RebuildParagraphs(float font_size) {
       body_style.setFontFamilies({SkString(family_name.c_str())});
     }
     body_style.setFontSize(font_size);
-    body_style.setColor(SkColorSetRGB(224, 255, 122));
+    body_style.setColor(SkColorSetRGB(90, 24, 154));
     body_style.setHeight(1.18F);
     body_style.setHeightOverride(true);
 
-    TextStyle accent_style = body_style;
-    accent_style.setColor(SkColorSetRGB(255, 119, 168));
-    accent_style.setFontStyle(SkFontStyle::Bold());
+    TextStyle warm_accent_style = body_style;
+    warm_accent_style.setColor(SkColorSetRGB(165, 56, 96));
+    warm_accent_style.setFontStyle(SkFontStyle::Bold());
+    TextStyle teal_accent_style = body_style;
+    teal_accent_style.setColor(SkColorSetRGB(10, 147, 150));
+    teal_accent_style.setFontStyle(SkFontStyle::Bold());
+    TextStyle green_accent_style = body_style;
+    green_accent_style.setColor(SkColorSetRGB(82, 121, 111));
+    green_accent_style.setFontStyle(SkFontStyle::Bold());
 
     for (int alignment_index = 0; alignment_index < kAlignmentCount;
          ++alignment_index) {
@@ -185,15 +217,18 @@ bool ElasticTextFiddle::RebuildParagraphs(float font_size) {
 
       builder->pushStyle(body_style);
       builder->addText("\"Ideas do not always ask for more ");
-      builder->pushStyle(accent_style);
+      builder->pushStyle(warm_accent_style);
       builder->addText("room");
       builder->pop();
       builder->addText(". They learn the ");
-      builder->pushStyle(accent_style);
+      builder->pushStyle(teal_accent_style);
       builder->addText("shape");
       builder->pop();
-      builder->addText(" of the space, find a new line, and keep their meaning "
-                       "as the edges move.\"");
+      builder->addText(" of the space, find a new ");
+      builder->pushStyle(green_accent_style);
+      builder->addText("line");
+      builder->pop();
+      builder->addText(", and keep their meaning as the edges move.\"");
       builder->pop();
 
       paragraphs_[font_index][alignment_index] = builder->Build();
@@ -258,18 +293,18 @@ void ElasticTextFiddle::Render(double time_seconds) {
   paragraph->layout(text_bounds.width());
 
   SkCanvas *canvas = surface->getCanvas();
-  canvas->clear(SkColorSetRGB(7, 24, 54));
+  canvas->clear(SkColorSetRGB(204, 213, 174));
 
   SkPaint paint;
   paint.setAntiAlias(true);
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(SkColorSetRGB(7, 9, 13));
-  canvas->drawRoundRect(panel, 24.0F, 24.0F, paint);
+  paint.setColor(SkColorSetRGB(254, 250, 224));
+  canvas->drawRoundRect(panel, 8.0F, 8.0F, paint);
 
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0F);
-  paint.setColor(SkColorSetRGB(66, 75, 86));
-  canvas->drawRoundRect(panel, 24.0F, 24.0F, paint);
+  paint.setColor(SK_ColorBLACK);
+  canvas->drawRoundRect(panel, 8.0F, 8.0F, paint);
 
   const float paragraph_y =
       text_bounds.top() + VerticalTextOffset(alignment_index,
@@ -283,17 +318,27 @@ void ElasticTextFiddle::Render(double time_seconds) {
   const float legend_height = canvas_height - panel.bottom();
   const float separator_y = panel.bottom() + legend_height * 0.18F;
   paint.setStrokeWidth(1.0F);
-  paint.setColor(SkColorSetRGB(50, 83, 125));
+  paint.setColor(SK_ColorBLACK);
   canvas->drawLine(canvas_width * 0.05F, separator_y, canvas_width * 0.95F,
                    separator_y, paint);
 
   SkFont label_font(label_typeface_, label_font_size);
   label_font.setEdging(SkFont::Edging::kAntiAlias);
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(SkColorSetRGB(190, 211, 236));
+  paint.setColor(SK_ColorBLACK);
 
-  const float label_x = canvas_width * 0.05F;
-  const float first_label_y = separator_y + label_font_size * 1.45F;
+  constexpr char kIconMeasureText[] = "000000";
+  const float measured_icon_size = label_font.measureText(
+      kIconMeasureText, sizeof(kIconMeasureText) - 1, SkTextEncoding::kUTF8);
+  const float legend_bottom_margin = std::max(4.0F, canvas_height * 0.015F);
+  const float icon_size = std::min(
+      measured_icon_size, std::max(24.0F, canvas_height - separator_y -
+                                              legend_bottom_margin * 2.0F));
+  const SkRect alignment_icon = SkRect::MakeXYWH(
+      canvas_width * 0.05F, canvas_height - legend_bottom_margin - icon_size,
+      icon_size, icon_size);
+  DrawAlignmentIcon(canvas, alignment_icon, alignment_index);
+
   const FontChoice &font_choice = kFontChoices[font_index];
   const std::string family_name =
       font_choice.font_id == nullptr
@@ -304,17 +349,14 @@ void ElasticTextFiddle::Render(double time_seconds) {
           ? "Font: " + std::string(font_choice.display_name) +
                 " (unavailable -> fallback)"
           : "Font: " + std::string(font_choice.display_name);
+  const float font_label_width = label_font.measureText(
+      font_label.data(), font_label.size(), SkTextEncoding::kUTF8);
+  const float font_label_x = canvas_width * 0.95F - font_label_width;
+  const float font_label_y =
+      alignment_icon.top() + (icon_size + label_font_size) * 0.5F;
   canvas->drawSimpleText(font_label.data(), font_label.size(),
-                         SkTextEncoding::kUTF8, label_x, first_label_y,
+                         SkTextEncoding::kUTF8, font_label_x, font_label_y,
                          label_font, paint);
-
-  const Alignment &alignment = kAlignments[alignment_index];
-  const std::string alignment_label = "Align: [" +
-                                      std::string(alignment.vertical_name) +
-                                      ", " + alignment.horizontal_name + "]";
-  canvas->drawSimpleText(
-      alignment_label.data(), alignment_label.size(), SkTextEncoding::kUTF8,
-      label_x, first_label_y + label_font_size * 1.35F, label_font, paint);
 
   const WebGlPresentResult present = webgl_->FlushAndPresent();
   if (!present.success) {

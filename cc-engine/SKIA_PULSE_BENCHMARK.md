@@ -1,13 +1,13 @@
-# Skia pulse: WebGL versus CPU
+# Skia drawing: WebGL versus CPU
 
 The app contains two benchmark entries:
 
-- **Skia WebGL pulse** (`skia-webgl`) uses Ganesh and renders directly into
+- **Skia Drawing (WebGL)** (`skia-webgl`) uses Ganesh and renders directly into
   WebGL default framebuffer 0.
-- **Skia CPU pulse** (`skia-cpu`) uses a raster `SkSurface` backed by an RGBA
+- **Skia Drawing (CPU)** (`skia-cpu`) uses a raster `SkSurface` backed by an RGBA
   buffer in Wasm memory, then presents it with `putImageData`.
 
-Both call `DrawSkiaPulseScene()` in `fiddles/skia_pulse_scene.cc`. There are no
+Both call `DrawSkiaDrawing()` in `fiddles/skia_drawing_builder.cc`. There are no
 backend-specific branches in the scene, so the clear, 14 halos, 24 curved
 rays, 24 nodes, and central rounded rectangle are identical.
 
@@ -16,7 +16,7 @@ rays, 24 nodes, and central rounded rectangle are identical.
 Each fiddle accumulates 120 frames and prints the same primary fields:
 
 ```text
-Skia pulse benchmark [backend] last 120 frames (accumulated ms):
+Skia drawing benchmark [backend] last 120 frames (accumulated ms):
 surface=..., scene-draw=..., present=..., measured-total=..., avg/frame=...
 ```
 

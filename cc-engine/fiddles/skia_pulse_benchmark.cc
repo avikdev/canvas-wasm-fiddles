@@ -23,7 +23,7 @@ void SkiaPulseBenchmark::Record(const SkiaPulseFrameTimings &timings) {
                           accumulated_.present_ms;
   std::ostringstream report;
   report << std::fixed << std::setprecision(2)
-         << "[cc-engine/stdout] Skia pulse benchmark [" << backend_label_
+         << "[cc-engine/stdout] Skia drawing benchmark [" << backend_label_
          << "] last " << kWindowFrames
          << " frames (accumulated ms): surface=" << accumulated_.surface_ms
          << ", scene-draw=" << accumulated_.scene_draw_ms

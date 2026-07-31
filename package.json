@@ -9,12 +9,14 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "deploy": "bun run build && gh-pages -d fiddle-app/dist --nojekyll",
     "check": "turbo check",
     "lint": "biome check .",
     "format": "biome format --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "gh-pages": "^6.3.0",
     "turbo": "latest",
     "typescript": "^6.0.0"
   }
