@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "fiddles/elastic_text_fiddle.h"
-#include "fiddles/orbital_bloom_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
 #include "fiddles/shape_intersection_fiddle.h"
 #include "fiddles/skia_cpu_fiddle.h"
@@ -14,10 +13,6 @@
 #include "fiddles/sksl_image_proc_fiddle.h"
 
 namespace {
-
-std::unique_ptr<FiddleBase> CreateOrbitalBloom() {
-  return std::make_unique<OrbitalBloomFiddle>();
-}
 
 std::unique_ptr<FiddleBase> CreateRibbonField() {
   return std::make_unique<RibbonFieldFiddle>();
@@ -48,7 +43,6 @@ std::unique_ptr<FiddleBase> CreateShapeIntersection() {
 FiddleManager::FiddleManager(emscripten::val canvas,
                              const std::string &initial_key)
     : canvas_(std::move(canvas)) {
-  registry_.Register("orbital-bloom", &CreateOrbitalBloom);
   registry_.Register("ribbon-field", &CreateRibbonField);
   registry_.Register("skia-webgl", &CreateSkiaWebGl);
   registry_.Register("skia-cpu", &CreateSkiaCpu);
@@ -60,14 +54,14 @@ FiddleManager::FiddleManager(emscripten::val canvas,
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "orbital-bloom, ribbon-field, skia-webgl, skia-cpu, "
-               "elastic-text, sksl-image-proc, and shape-intersection."
+            << "ribbon-field, skia-webgl, skia-cpu, elastic-text, "
+               "sksl-image-proc, and shape-intersection."
             << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
 
   if (!SelectFiddle(initial_key)) {
-    SelectFiddle("orbital-bloom");
+    SelectFiddle("ribbon-field");
   }
 }
 

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iostream>
 #include <numbers>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -13,6 +14,9 @@
 #include "include/core/SkBlendMode.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontMgr.h"
+#include "include/core/SkFontStyle.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkPathBuilder.h"
@@ -20,6 +24,7 @@
 #include "include/core/SkRect.h"
 #include "include/core/SkSurface.h"
 #include "include/pathops/SkPathOps.h"
+#include "text/skia_font_manager.h"
 
 namespace {
 
@@ -29,11 +34,12 @@ constexpr int kPlusCount = 1;
 constexpr int kCircleCount = 3;
 constexpr int kBlobCount =
     kOctopusCount + kHoledPolygonCount + kPlusCount + kCircleCount;
-constexpr int kPieceColorCount = 12;
+constexpr int kPieceColorCount = 17;
 constexpr SkColor kCanvasColor = SkColorSetRGB(244, 232, 210);
 constexpr std::array<SkColor, kPieceColorCount> kPieceColors = {
     0xff4361ee, 0xff3a86ff, 0xff00b4d8, 0xff06d6a0, 0xff70e000, 0xffffbe0b,
-    0xffff9f1c, 0xffff5d8f, 0xfff72585, 0xffb5179e, 0xff8338ec, 0xffef476f};
+    0xffff9f1c, 0xffff5d8f, 0xfff72585, 0xffb5179e, 0xff8338ec, 0xffef476f,
+    0xffff1744, 0xff651fff, 0xff00e5ff, 0xffaeea00, 0xffff3d00};
 
 struct BlobShape {
   SkPath path;
@@ -398,10 +404,19 @@ bool BoundsOverlap(const SkPath &first, const SkPath &second) {
   return SkRect::Intersects(first.getBounds(), second.getBounds());
 }
 
+bool IsVisibleOnCanvas(const SkPath &path, const SkRect &canvas_bounds) {
+  return !path.isEmpty() && SkRect::Intersects(path.getBounds(), canvas_bounds);
+}
+
 std::vector<Region>
-BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs) {
+BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs,
+                     const SkRect &canvas_bounds) {
   std::vector<Region> regions;
   for (const BlobShape &blob : blobs) {
+    if (!IsVisibleOnCanvas(blob.path, canvas_bounds)) {
+      continue;
+    }
+
     std::vector<Region> next_regions;
     next_regions.reserve(regions.size() * 2 + 1);
     std::vector<SkPath> remainder = {blob.path};
@@ -413,11 +428,11 @@ BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs) {
       }
 
       if (auto outside = Op(region.path, blob.path, kDifference_SkPathOp);
-          outside.has_value() && !outside->isEmpty()) {
+          outside.has_value() && IsVisibleOnCanvas(*outside, canvas_bounds)) {
         next_regions.push_back({std::move(*outside), region.id});
       }
       if (auto overlap = Op(region.path, blob.path, kIntersect_SkPathOp);
-          overlap.has_value() && !overlap->isEmpty()) {
+          overlap.has_value() && IsVisibleOnCanvas(*overlap, canvas_bounds)) {
         next_regions.push_back(
             {std::move(*overlap), CombinePieceIds(region.id, blob.id)});
       }
@@ -429,7 +444,8 @@ BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs) {
           continue;
         }
         if (auto difference = Op(remaining, region.path, kDifference_SkPathOp);
-            difference.has_value() && !difference->isEmpty()) {
+            difference.has_value() &&
+            IsVisibleOnCanvas(*difference, canvas_bounds)) {
           next_remainder.push_back(std::move(*difference));
         }
       }
@@ -437,11 +453,44 @@ BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs) {
     }
 
     for (SkPath &path : remainder) {
-      next_regions.push_back({std::move(path), blob.id});
+      if (IsVisibleOnCanvas(path, canvas_bounds)) {
+        next_regions.push_back({std::move(path), blob.id});
+      }
     }
     regions = std::move(next_regions);
   }
   return regions;
+}
+
+void DrawPieceCountChip(SkCanvas *canvas, int piece_count, float width,
+                        float height, const sk_sp<SkTypeface> &typeface) {
+  const float shortest = std::min(width, height);
+  const float font_size = std::clamp(shortest * 0.032F, 18.0F, 28.0F);
+  const float horizontal_padding = font_size * 0.65F;
+  const float vertical_padding = font_size * 0.42F;
+  const float margin = std::clamp(shortest * 0.025F, 12.0F, 22.0F);
+  const std::string label = "#pieces: " + std::to_string(piece_count);
+  const SkFont font(typeface, font_size);
+  SkRect text_bounds;
+  const float text_width = font.measureText(
+      label.data(), label.size(), SkTextEncoding::kUTF8, &text_bounds);
+  const float chip_width = text_width + horizontal_padding * 2.0F;
+  const float chip_height = text_bounds.height() + vertical_padding * 2.0F;
+  const SkRect chip = SkRect::MakeXYWH(width - margin - chip_width, margin,
+                                       chip_width, chip_height);
+
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kFill_Style);
+  paint.setColor(SkColorSetRGB(28, 30, 29));
+  canvas->drawRoundRect(chip, 6.0F, 6.0F, paint);
+
+  paint.setColor(SK_ColorWHITE);
+  const float baseline =
+      chip.centerY() - (text_bounds.top() + text_bounds.bottom()) * 0.5F;
+  canvas->drawSimpleText(label.data(), label.size(), SkTextEncoding::kUTF8,
+                         chip.left() + horizontal_padding, baseline, font,
+                         paint);
 }
 
 } // namespace
@@ -460,6 +509,18 @@ bool ShapeIntersectionFiddle::EnsureWebGl() {
     return false;
   }
   initialization_attempted_ = true;
+  sk_sp<SkFontMgr> font_manager = SkiaFontManager::Instance().FontManager();
+  if (font_manager != nullptr) {
+    label_typeface_ =
+        font_manager->matchFamilyStyle("Roboto", SkFontStyle::Normal());
+  }
+  if (label_typeface_ == nullptr) {
+    std::cerr << "[cc-engine/stderr] Shape intersection could not resolve its "
+                 "label typeface."
+              << std::endl;
+    return false;
+  }
+
   auto webgl = std::make_unique<WebGlCanvasContext>();
   if (!webgl->Initialize(Canvas())) {
     return false;
@@ -484,7 +545,10 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
     blobs[index] = BuildBlob(index, time_seconds, static_cast<float>(width),
                              static_cast<float>(height));
   }
-  const std::vector<Region> regions = BuildDisjointRegions(blobs);
+  const SkRect canvas_bounds =
+      SkRect::MakeWH(static_cast<float>(width), static_cast<float>(height));
+  const std::vector<Region> regions =
+      BuildDisjointRegions(blobs, canvas_bounds);
 
   SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
@@ -508,6 +572,9 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   for (const Region &region : regions) {
     canvas->drawPath(region.path, stroke);
   }
+  DrawPieceCountChip(canvas, static_cast<int>(regions.size()),
+                     static_cast<float>(width), static_cast<float>(height),
+                     label_typeface_);
 
   const WebGlPresentResult present = webgl_->FlushAndPresent();
   if (!present.success) {

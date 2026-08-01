@@ -13,6 +13,7 @@ cc_library(
     deps = [
         "//:fiddle_base",
         "//graphics:webgl_canvas_context",
+        "//text:font_cycle",
         "//text:skia_font_manager",
         "//utils:random_permutation",
         "@skia//:core",
@@ -49,20 +50,10 @@ cc_library(
     deps = [
         "//:fiddle_base",
         "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
         "@skia//:core",
         "@skia//:pathops",
     ],
-)
-
-cc_library(
-    name = "orbital_bloom_fiddle",
-    srcs = ["orbital_bloom_fiddle.cc"],
-    hdrs = ["orbital_bloom_fiddle.h"],
-    target_compatible_with = select({
-        "//:wasm_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = ["//:fiddle_base"],
 )
 
 cc_library(
@@ -73,7 +64,17 @@ cc_library(
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = ["//:fiddle_base"],
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "//text:font_cycle",
+        "//text:skia_font_manager",
+        "//utils:color_utils",
+        "@skia//:core",
+        "@skia//:pathops",
+        "@skia//:skparagraph_harfbuzz_skunicode",
+        "@skia//:skunicode_icu",
+    ],
 )
 
 cc_library(
@@ -94,7 +95,10 @@ cc_library(
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = ["@skia//:core"],
+    deps = [
+        "//utils:color_utils",
+        "@skia//:core",
+    ],
 )
 
 cc_library(
@@ -106,9 +110,9 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
-        ":skia_pulse_benchmark",
         ":skia_drawing_builder",
+        ":skia_pulse_benchmark",
+        "//:fiddle_base",
         "//graphics:webgl_canvas_context",
         "@skia//:core",
     ],
@@ -123,9 +127,9 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
-        ":skia_pulse_benchmark",
         ":skia_drawing_builder",
+        ":skia_pulse_benchmark",
+        "//:fiddle_base",
         "//graphics:raster_canvas_context",
         "@skia//:core",
     ],

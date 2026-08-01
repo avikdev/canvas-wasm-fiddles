@@ -27,7 +27,7 @@ protected:
 
 private:
   bool EnsureResources();
-  bool RebuildParagraphs(float font_size);
+  bool RebuildParagraphs(float font_size, float gradient_width);
 
   std::unique_ptr<WebGlCanvasContext> webgl_;
   sk_sp<skia::textlayout::FontCollection> font_collection_;
@@ -37,4 +37,5 @@ private:
   std::vector<int> alignment_sequence_;
   bool initialization_attempted_ = false;
   float paragraph_font_size_ = 0.0F;
+  float paragraph_gradient_width_ = 0.0F;
 };

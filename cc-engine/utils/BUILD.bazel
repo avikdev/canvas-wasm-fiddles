@@ -3,6 +3,13 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "color_utils",
+    srcs = ["color_utils.cc"],
+    hdrs = ["color_utils.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_library(
     name = "random_permutation",
     srcs = ["random_permutation.cc"],
     hdrs = ["random_permutation.h"],

@@ -1,5 +1,5 @@
-load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -45,7 +45,6 @@ cc_library(
         ":fiddle_base",
         ":fiddle_registry",
         "//fiddles:elastic_text_fiddle",
-        "//fiddles:orbital_bloom_fiddle",
         "//fiddles:ribbon_field_fiddle",
         "//fiddles:shape_intersection_fiddle",
         "//fiddles:skia_cpu_fiddle",
@@ -59,11 +58,6 @@ cc_library(
 cc_binary(
     name = "demo",
     srcs = ["bindings.cc"],
-    deps = [
-        ":fiddle_manager",
-        "//images:skia_image_store",
-        "//text:skia_font_manager",
-    ],
     linkopts = [
         "-s MODULARIZE=1",
         "-s EXPORT_ES6=1",
@@ -79,6 +73,11 @@ cc_binary(
         "--no-entry",
     ],
     tags = ["manual"],
+    deps = [
+        ":fiddle_manager",
+        "//images:skia_image_store",
+        "//text:skia_font_manager",
+    ],
 )
 
 wasm_cc_binary(
@@ -89,8 +88,8 @@ wasm_cc_binary(
 js_binary(
     name = "wasm_exporter",
     data = [
-        ":demo_wasm",
         "wasm_exporter.mjs",
+        ":demo_wasm",
     ],
     entry_point = "wasm_exporter.mjs",
 )

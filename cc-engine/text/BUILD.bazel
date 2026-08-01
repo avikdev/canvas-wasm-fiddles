@@ -25,3 +25,14 @@ cc_library(
         "@skia//:fontmgr_data_freetype",
     ],
 )
+
+cc_library(
+    name = "font_cycle",
+    srcs = ["font_cycle.cc"],
+    hdrs = ["font_cycle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [":skia_font_manager"],
+)

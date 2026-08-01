@@ -11,47 +11,11 @@
 #include "include/core/SkColor.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPathBuilder.h"
-#include "include/core/SkRect.h"
+#include "utils/color_utils.h"
 
 namespace {
 
 using EyeColorPair = std::pair<SkColor4f, SkColor4f>;
-
-SkColor4f ColorFromHsv(float hue, float saturation, float value,
-                       float alpha = 1.0F) {
-  hue = std::fmod(hue, 360.0F);
-  if (hue < 0.0F) {
-    hue += 360.0F;
-  }
-  const float chroma = value * saturation;
-  const float sector = hue / 60.0F;
-  const float secondary =
-      chroma * (1.0F - std::abs(std::fmod(sector, 2.0F) - 1.0F));
-  float red = 0.0F;
-  float green = 0.0F;
-  float blue = 0.0F;
-  if (sector < 1.0F) {
-    red = chroma;
-    green = secondary;
-  } else if (sector < 2.0F) {
-    red = secondary;
-    green = chroma;
-  } else if (sector < 3.0F) {
-    green = chroma;
-    blue = secondary;
-  } else if (sector < 4.0F) {
-    green = secondary;
-    blue = chroma;
-  } else if (sector < 5.0F) {
-    red = secondary;
-    blue = chroma;
-  } else {
-    red = chroma;
-    blue = secondary;
-  }
-  const float match = value - chroma;
-  return {red + match, green + match, blue + match, alpha};
-}
 
 const std::vector<EyeColorPair> &GetEyeColors() {
   static const std::vector<EyeColorPair> *kInstance = [] {
@@ -62,8 +26,8 @@ const std::vector<EyeColorPair> &GetEyeColors() {
     for (int index = 0; index < 64; ++index) {
       const float hue =
           kBaseHues[index % kBaseHues.size()] + (index / 8) * 5.5F;
-      colors->emplace_back(ColorFromHsv(hue, 0.48F, 1.0F),
-                           ColorFromHsv(hue, 0.58F, 0.74F));
+      colors->emplace_back(color_utils::FromHsv(hue, 0.48F, 1.0F),
+                           color_utils::FromHsv(hue, 0.58F, 0.74F));
     }
     return colors;
   }();
@@ -92,8 +56,8 @@ void DrawSkiaDrawing(SkCanvas *canvas, int width, int height,
         static_cast<float>(halo + 1) / static_cast<float>(kHaloCount);
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(0.8F + ratio * 1.4F);
-    paint.setColor4f(ColorFromHsv(190.0F + ratio * 125.0F, 0.65F, 0.85F,
-                                  0.08F + ratio * 0.18F),
+    paint.setColor4f(color_utils::FromHsv(190.0F + ratio * 125.0F, 0.65F, 0.85F,
+                                          0.08F + ratio * 0.18F),
                      nullptr);
     canvas->drawCircle(center_x, center_y,
                        shortest * (0.055F + ratio * 0.40F) +
@@ -167,17 +131,22 @@ void DrawSkiaDrawing(SkCanvas *canvas, int width, int height,
     }
   }
 
-  const float pulse = 1.0F + std::sin(time * 2.0F) * 0.07F;
-  const SkRect core =
-      SkRect::MakeXYWH(center_x - shortest * 0.082F * pulse,
-                       center_y - shortest * 0.082F * pulse,
-                       shortest * 0.164F * pulse, shortest * 0.164F * pulse);
+  constexpr int kCoreCircleCount = 6;
+  constexpr std::array<int, kCoreCircleCount> kCoreColorIndices = {0,  11, 22,
+                                                                   33, 44, 55};
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor4f(ColorFromHsv(214.0F + time * 14.0F, 0.54F, 0.86F, 0.94F),
-                   nullptr);
-  canvas->drawRoundRect(core, shortest * 0.025F, shortest * 0.025F, paint);
-  paint.setStyle(SkPaint::kStroke_Style);
-  paint.setStrokeWidth(2.0F);
-  paint.setColor(SK_ColorWHITE);
-  canvas->drawRoundRect(core, shortest * 0.025F, shortest * 0.025F, paint);
+  for (int circle = 0; circle < kCoreCircleCount; ++circle) {
+    const float base_radius =
+        shortest * (0.092F - static_cast<float>(circle) * 0.0125F);
+    const float primary_pulse =
+        std::sin(time * (1.82F + circle * 0.035F) + circle * 0.58F) *
+        (0.050F + circle * 0.008F);
+    const float secondary_pulse =
+        std::sin(time * 0.67F + circle * 1.31F) * 0.018F;
+    const float radius = base_radius * (1.0F + primary_pulse + secondary_pulse);
+    SkColor4f core_color = eye_colors[kCoreColorIndices[circle]].first;
+    core_color.fA = 0.97F;
+    paint.setColor4f(core_color, nullptr);
+    canvas->drawCircle(center_x, center_y, radius, paint);
+  }
 }

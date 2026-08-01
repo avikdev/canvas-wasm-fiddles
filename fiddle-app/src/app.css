@@ -13,7 +13,13 @@
 
 :root {
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   color: #17201c;
   background: #f6f3ea;
   font-synthesis: none;
@@ -52,19 +58,90 @@ a {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  grid-template-rows: 72px minmax(0, 1fr);
   height: 100vh;
+}
+
+.app-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: #f6f3ea;
+  background:
+    radial-gradient(
+      circle at 50% -120%,
+      rgb(246 173 10 / 16%),
+      transparent 42%
+    ),
+    #17201c;
+  border-bottom: 1px solid rgb(246 243 234 / 12%);
+}
+
+.app-bar .brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.nav-toggle {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  margin-left: 20px;
+  place-items: center;
+  color: #f6f3ea;
+  cursor: pointer;
+  background: rgb(246 243 234 / 6%);
+  border: 1px solid rgb(246 243 234 / 14%);
+  border-radius: 8px;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.nav-toggle:hover {
+  color: #f6ad0a;
+  background: rgb(246 243 234 / 10%);
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  min-height: 0;
+  transition: grid-template-columns 180ms ease;
+}
+
+.app-body.nav-closed {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 .sidebar {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   padding: 28px;
   color: #f6f3ea;
-  background: radial-gradient(circle at 85% 15%, rgb(246 173 10 / 12%), transparent 27%), #17201c;
+  background:
+    radial-gradient(circle at 85% 15%, rgb(246 173 10 / 12%), transparent 27%),
+    #17201c;
   border-right: 1px solid rgb(246 243 234 / 12%);
+  transition:
+    padding 180ms ease,
+    opacity 120ms ease;
+}
+
+.app-body.nav-closed .sidebar {
+  visibility: hidden;
+  padding-right: 0;
+  padding-left: 0;
+  opacity: 0;
+  border-right: 0;
 }
 
 .brand {
@@ -86,9 +163,8 @@ a {
 
 .brand p,
 .brand span,
-.sidebar-copy p,
-.sidebar-copy h1,
-.nav-label,
+.nav-description,
+.nav-heading,
 .fiddle-link-copy strong,
 .fiddle-link-copy small,
 .fiddle-header h2,
@@ -110,11 +186,18 @@ a {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 10px;
   letter-spacing: 0.08em;
+  white-space: nowrap;
   text-transform: uppercase;
 }
 
-.sidebar-copy {
-  margin: clamp(56px, 10vh, 104px) 0 36px;
+.brand-copy {
+  text-align: center;
+}
+
+.app-bar .brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
 }
 
 .eyebrow {
@@ -128,49 +211,40 @@ a {
   text-transform: uppercase;
 }
 
-.sidebar-copy .eyebrow {
+.nav-heading {
   color: #f6ad0a;
 }
 
-.sidebar-copy h1 {
-  max-width: 230px;
-  margin-top: 14px;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(34px, 3vw, 44px);
-  font-weight: 500;
-  line-height: 0.96;
-  letter-spacing: -0.04em;
-}
-
-.sidebar-copy > p:last-child {
-  max-width: 235px;
-  margin-top: 18px;
+.nav-description {
+  margin-top: 12px;
   color: rgb(246 243 234 / 58%);
-  font-size: 12px;
-  line-height: 1.65;
+  font-size: 11px;
+  line-height: 1.55;
 }
 
 .sidebar [data-orientation="horizontal"] {
+  margin-top: 20px;
   background: rgb(246 243 234 / 12%);
 }
 
 .fiddle-nav {
   display: grid;
+  flex: 1 1 auto;
   gap: 7px;
-  margin-top: 28px;
+  min-height: 0;
+  margin-top: 20px;
+  overflow-y: auto;
+  align-content: start;
 }
 
-.nav-label {
-  margin-bottom: 8px;
-  color: rgb(246 243 234 / 42%);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+.fiddle-link-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 12px;
 }
 
 .fiddle-link {
-  position: relative;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) 16px;
   width: 100%;
@@ -179,29 +253,36 @@ a {
   padding: 8px 9px;
   color: rgb(246 243 234 / 64%);
   text-align: left;
-  border: 1px solid transparent;
-  border-radius: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
-.fiddle-link:hover {
+.fiddle-link-shell:hover .fiddle-link {
   color: #f6f3ea;
+  background: transparent;
+}
+
+.fiddle-link-shell:hover {
   background: rgb(246 243 234 / 6%);
 }
 
-.fiddle-link.active {
-  color: #f6f3ea;
+.fiddle-link-shell.active {
   background: rgb(246 243 234 / 8%);
   border-color: rgb(246 243 234 / 12%);
 }
 
-.fiddle-link.active::before {
+.fiddle-link-shell.active .fiddle-link {
+  color: #f6f3ea;
+}
+
+.fiddle-link-shell.active::before {
   position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 2px;
+  inset: 0 auto 0 0;
+  z-index: 1;
   width: 3px;
+  pointer-events: none;
   background: #f6ad0a;
-  border-radius: 1px;
   content: "";
 }
 
@@ -249,45 +330,79 @@ a {
     transform 160ms ease;
 }
 
-.fiddle-link:hover .nav-arrow,
-.fiddle-link.active .nav-arrow {
+.fiddle-link-shell:hover .nav-arrow,
+.fiddle-link-shell.active .nav-arrow {
   opacity: 0.7;
   transform: translate(1px, -1px);
 }
 
 .sidebar-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
   margin-top: auto;
-  padding-top: 28px;
+  padding-top: 20px;
   color: rgb(246 243 234 / 45%);
+  border-top: 1px solid rgb(246 243 234 / 10%);
 }
 
 .sidebar-footer a {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
+  display: flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 7px 8px;
   color: inherit;
-  transition: color 160ms ease;
+  font-size: 9px;
+  font-weight: 600;
+  text-decoration: none;
+  background: rgb(246 243 234 / 4%);
+  border: 1px solid rgb(246 243 234 / 8%);
+  border-radius: 7px;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .sidebar-footer svg {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
   fill: currentColor;
 }
 
 .sidebar-footer a:hover {
   color: #f6f3ea;
+  background: rgb(246 243 234 / 8%);
+}
+
+.wasm-icon {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 850;
+  background: #654ff0;
+  border-radius: 4px;
+}
+
+.sidebar-footer .text-resource-link {
+  grid-column: 1 / -1;
+  min-height: 28px;
 }
 
 .main-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 28px clamp(28px, 5vw, 72px) 30px;
   background:
     linear-gradient(rgb(23 32 28 / 3%) 1px, transparent 1px),
@@ -421,8 +536,38 @@ a {
   }
 
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-rows: 64px auto;
     height: auto;
+    min-height: 100vh;
+  }
+
+  .app-bar {
+    position: sticky;
+    top: 0;
+  }
+
+  .app-bar .brand {
+    gap: 9px;
+  }
+
+  .app-bar .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav-toggle {
+    width: 36px;
+    height: 36px;
+    margin-left: 14px;
+  }
+
+  .app-body,
+  .app-body.nav-closed {
+    grid-template-columns: 1fr;
+  }
+
+  .app-body.nav-closed .sidebar {
+    display: none;
   }
 
   .sidebar {
@@ -431,27 +576,15 @@ a {
     padding: 20px;
   }
 
-  .sidebar-copy {
-    margin: 38px 0 24px;
-  }
-
-  .sidebar-copy h1 {
-    max-width: none;
-  }
-
-  .sidebar-copy > p:last-child,
-  .sidebar [data-orientation="horizontal"],
-  .sidebar-footer {
+  .sidebar [data-orientation="horizontal"] {
     display: none;
   }
 
   .fiddle-nav {
     grid-template-columns: 1fr 1fr;
-    margin-top: 0;
-  }
-
-  .nav-label {
-    grid-column: 1 / -1;
+    flex: none;
+    margin-top: 20px;
+    overflow-y: visible;
   }
 
   .fiddle-link {

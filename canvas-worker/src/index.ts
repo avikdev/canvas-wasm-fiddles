@@ -1,5 +1,4 @@
 export const fiddleIds = [
-  "orbital-bloom",
   "ribbon-field",
   "skia-webgl",
   "skia-cpu",

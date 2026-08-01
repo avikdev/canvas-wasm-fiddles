@@ -4,7 +4,7 @@ import type { CanvasWorkerMessage, FiddleId } from "./index";
 import CreateCanvasDemoModule, { type FiddleManager } from "./wasm/demo.js";
 
 let fiddleManager: FiddleManager | undefined;
-let selectedFiddle: FiddleId = "orbital-bloom";
+let selectedFiddle: FiddleId = "ribbon-field";
 let width = 1;
 let height = 1;
 let dpr = 1;

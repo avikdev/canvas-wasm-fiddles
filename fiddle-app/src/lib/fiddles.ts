@@ -11,18 +11,11 @@ export type Fiddle = {
 
 export const fiddles = [
   {
-    id: "orbital-bloom",
-    title: "Orbital bloom",
-    summary: "A field of particles moving through four nested elliptical orbits.",
-    technique: "OffscreenCanvas · particles",
-    color: "#f6ad0a",
-    initials: "OB",
-  },
-  {
     id: "ribbon-field",
     title: "Ribbon field",
-    summary: "Layered sine waves turn into a soft kinetic textile.",
-    technique: "2D paths · oscillation",
+    summary:
+      "Animated Skia ribbons cut a horizontal, font-cycling “Hello” into flat saturated letter pieces with Path Ops.",
+    technique: "Skia text paths · Path Ops · WebGL",
     color: "#ff8066",
     initials: "RF",
   },
@@ -63,8 +56,7 @@ export const fiddles = [
   {
     id: "shape-intersection",
     title: "Shape intersection",
-    summary:
-      "Skia Path Ops (intersection, difference) using geometries and octopus blobs.",
+    summary: "Skia Path Ops (intersection, difference) using geometries and tentacled blobs.",
     technique: "Skia Path Ops · mixed contours",
     color: "#b8e0d4",
     initials: "SI",
