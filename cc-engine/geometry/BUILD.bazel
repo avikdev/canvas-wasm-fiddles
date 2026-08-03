@@ -1,0 +1,35 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "catmull_rom_spline",
+    srcs = ["catmull_rom_spline.cc"],
+    hdrs = ["catmull_rom_spline.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "catmull_rom_spline_test",
+    srcs = ["catmull_rom_spline_test.cc"],
+    deps = [
+        ":catmull_rom_spline",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "shape_builder",
+    srcs = ["shape_builder.cc"],
+    hdrs = ["shape_builder.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "shape_builder_test",
+    srcs = ["shape_builder_test.cc"],
+    deps = [
+        ":shape_builder",
+        "@skia//:core",
+    ],
+)

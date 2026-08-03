@@ -91,6 +91,26 @@ outlines demonstrates erasing boundaries after composition. These capabilities
 map directly to union, intersect, subtract, divide, compound-path, and
 shape-builder workflows in a design editor.
 
+### Shape tracing
+
+This prototype demonstrates how a design editor can expose and traverse the
+geometry of text outlines and compound shapes. It converts a glyph into a
+multi-contour Skia path, measures each outer and inner boundary independently,
+and derives positions and tangents at arbitrary distances. These capabilities
+support path-direction inspection, animated motion paths, evenly distributed
+anchors, contour-aware editing tools, and precise placement along vector
+boundaries.
+
+### Vortex Field
+
+Each vortex defines a signed radial angle field. For a sample at distance
+`d < radius`, the engine rotates it around the field center by up to three full
+turns, multiplied by `1 - smoothstep(d / radius)`; the sign selects clockwise
+or counter-clockwise rotation. Skia Path Ops first rejects contours outside
+the field, intersecting fields are composed in sequence, and the displaced
+samples are reconstructed as cubic Bézier contours with Catmull–Rom splines.
+The source fill rule is retained so compound-path holes survive deformation.
+
 Build the standalone Wasm demo separately:
 
 ```sh

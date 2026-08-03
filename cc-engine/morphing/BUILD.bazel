@@ -1,0 +1,87 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "geometry_kernel",
+    srcs = ["geometry_kernel.cc"],
+    hdrs = ["geometry_kernel.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "geometry_kernel_test",
+    srcs = ["geometry_kernel_test.cc"],
+    deps = [
+        ":geometry_kernel",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "path_geometry",
+    srcs = ["path_geometry.cc"],
+    hdrs = ["path_geometry.h"],
+    deps = [
+        ":geometry_kernel",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "topology_guard",
+    srcs = ["topology_guard.cc"],
+    hdrs = ["topology_guard.h"],
+    deps = [
+        ":geometry_kernel",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_test(
+    name = "topology_guard_test",
+    srcs = ["topology_guard_test.cc"],
+    deps = [
+        ":topology_guard",
+        "@skia//:core",
+    ],
+)
+
+cc_test(
+    name = "shape_morpher_test",
+    srcs = ["shape_morpher_test.cc"],
+    deps = [
+        ":shape_morpher",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "correspondence_solver",
+    srcs = ["correspondence_solver.cc"],
+    hdrs = ["correspondence_solver.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "correspondence_solver_test",
+    srcs = ["correspondence_solver_test.cc"],
+    deps = [
+        ":correspondence_solver",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "shape_morpher",
+    srcs = ["shape_morpher.cc"],
+    hdrs = ["shape_morpher.h"],
+    deps = [
+        ":correspondence_solver",
+        ":geometry_kernel",
+        ":path_geometry",
+        ":topology_guard",
+        "@skia//:core",
+    ],
+)

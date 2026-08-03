@@ -32,6 +32,7 @@ private:
   std::unique_ptr<WebGlCanvasContext> webgl_;
   sk_sp<skia::textlayout::FontCollection> font_collection_;
   sk_sp<SkTypeface> label_typeface_;
+  sk_sp<SkTypeface> bold_label_typeface_;
   std::array<std::array<std::unique_ptr<skia::textlayout::Paragraph>, 9>, 3>
       paragraphs_;
   std::vector<int> alignment_sequence_;

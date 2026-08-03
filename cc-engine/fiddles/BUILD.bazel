@@ -57,6 +57,59 @@ cc_library(
 )
 
 cc_library(
+    name = "shape_tracing_fiddle",
+    srcs = ["shape_tracing_fiddle.cc"],
+    hdrs = ["shape_tracing_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "//utils:color_utils",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "shape_morphing_fiddle",
+    srcs = ["shape_morphing_fiddle.cc"],
+    hdrs = ["shape_morphing_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//graphics:webgl_canvas_context",
+        "//morphing:shape_morpher",
+        "//text:skia_font_manager",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "vortex_field_fiddle",
+    srcs = ["vortex_field_fiddle.cc"],
+    hdrs = ["vortex_field_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//:fiddle_base",
+        "//geometry:catmull_rom_spline",
+        "//geometry:shape_builder",
+        "//graphics:webgl_canvas_context",
+        "//utils:color_utils",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_library(
     name = "ribbon_field_fiddle",
     srcs = ["ribbon_field_fiddle.cc"],
     hdrs = ["ribbon_field_fiddle.h"],

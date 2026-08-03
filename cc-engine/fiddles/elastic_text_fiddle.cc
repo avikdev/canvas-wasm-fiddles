@@ -120,7 +120,8 @@ ElasticTextFiddle::~ElasticTextFiddle() = default;
 bool ElasticTextFiddle::UsesWebGl() const { return true; }
 
 bool ElasticTextFiddle::EnsureResources() {
-  if (webgl_ != nullptr && font_collection_ != nullptr) {
+  if (webgl_ != nullptr && font_collection_ != nullptr &&
+      label_typeface_ != nullptr && bold_label_typeface_ != nullptr) {
     return true;
   }
   if (initialization_attempted_) {
@@ -147,6 +148,14 @@ bool ElasticTextFiddle::EnsureResources() {
   if (label_typeface_ == nullptr) {
     std::cerr << "[cc-engine/stderr] Elastic text could not resolve its "
                  "Roboto fallback typeface."
+              << std::endl;
+    return false;
+  }
+  bold_label_typeface_ =
+      font_manager->matchFamilyStyle("Roboto", SkFontStyle::Bold());
+  if (bold_label_typeface_ == nullptr) {
+    std::cerr << "[cc-engine/stderr] Elastic text could not resolve its "
+                 "Roboto bold label typeface."
               << std::endl;
     return false;
   }
@@ -356,6 +365,8 @@ void ElasticTextFiddle::Render(double time_seconds) {
 
   SkFont label_font(label_typeface_, label_font_size);
   label_font.setEdging(SkFont::Edging::kAntiAlias);
+  SkFont bold_label_font(bold_label_typeface_, label_font_size);
+  bold_label_font.setEdging(SkFont::Edging::kAntiAlias);
   paint.setStyle(SkPaint::kFill_Style);
   paint.setColor(SK_ColorBLACK);
 
@@ -366,26 +377,42 @@ void ElasticTextFiddle::Render(double time_seconds) {
   const float icon_size = std::min(
       measured_icon_size, std::max(24.0F, canvas_height - separator_y -
                                               legend_bottom_margin * 2.0F));
+  constexpr char kAlignmentLabel[] = "Align:";
+  const float alignment_label_width = label_font.measureText(
+      kAlignmentLabel, sizeof(kAlignmentLabel) - 1, SkTextEncoding::kUTF8);
+  const float alignment_gap = label_font_size * 0.45F;
+  const float alignment_label_x = canvas_width * 0.05F;
   const SkRect alignment_icon = SkRect::MakeXYWH(
-      canvas_width * 0.05F, canvas_height - legend_bottom_margin - icon_size,
-      icon_size, icon_size);
+      alignment_label_x + alignment_label_width + alignment_gap,
+      canvas_height - legend_bottom_margin - icon_size, icon_size, icon_size);
+  const float legend_baseline =
+      alignment_icon.top() + (icon_size + label_font_size) * 0.5F;
+  canvas->drawSimpleText(kAlignmentLabel, sizeof(kAlignmentLabel) - 1,
+                         SkTextEncoding::kUTF8, alignment_label_x,
+                         legend_baseline, label_font, paint);
   DrawAlignmentIcon(canvas, alignment_icon, alignment_index);
 
   const text::FontChoice &font_choice = text::kFontChoices[font_index];
   const std::string family_name = text::ResolveFontFamily(font_choice);
-  const std::string font_label =
-      family_name.empty() && font_choice.font_id != nullptr
-          ? "Font: " + std::string(font_choice.display_name) +
-                " (unavailable -> fallback)"
-          : "Font: " + std::string(font_choice.display_name);
-  const float font_label_width = label_font.measureText(
-      font_label.data(), font_label.size(), SkTextEncoding::kUTF8);
-  const float font_label_x = canvas_width * 0.95F - font_label_width;
-  const float font_label_y =
-      alignment_icon.top() + (icon_size + label_font_size) * 0.5F;
-  canvas->drawSimpleText(font_label.data(), font_label.size(),
-                         SkTextEncoding::kUTF8, font_label_x, font_label_y,
+  constexpr char kFontPrefix[] = "Font: ";
+  const std::string font_value =
+      font_choice.font_id == nullptr ? "default (Roboto)"
+      : family_name.empty()
+          ? std::string(font_choice.display_name) + " (unavailable -> fallback)"
+          : std::string(font_choice.display_name);
+  const float font_prefix_width = label_font.measureText(
+      kFontPrefix, sizeof(kFontPrefix) - 1, SkTextEncoding::kUTF8);
+  const float font_value_width = bold_label_font.measureText(
+      font_value.data(), font_value.size(), SkTextEncoding::kUTF8);
+  const float font_label_x =
+      canvas_width * 0.95F - font_prefix_width - font_value_width;
+  canvas->drawSimpleText(kFontPrefix, sizeof(kFontPrefix) - 1,
+                         SkTextEncoding::kUTF8, font_label_x, legend_baseline,
                          label_font, paint);
+  canvas->drawSimpleText(font_value.data(), font_value.size(),
+                         SkTextEncoding::kUTF8,
+                         font_label_x + font_prefix_width, legend_baseline,
+                         bold_label_font, paint);
 
   const WebGlPresentResult present = webgl_->FlushAndPresent();
   if (!present.success) {

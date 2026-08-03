@@ -90,6 +90,46 @@ SkColor4f FromHsv(float hue_degrees, float saturation, float value,
           std::clamp(alpha, 0.0F, 1.0F)};
 }
 
+SkColor4f FromHsl(float hue_degrees, float saturation, float lightness,
+                  float alpha) {
+  hue_degrees = std::fmod(hue_degrees, 360.0F);
+  if (hue_degrees < 0.0F) {
+    hue_degrees += 360.0F;
+  }
+  saturation = std::clamp(saturation, 0.0F, 1.0F);
+  lightness = std::clamp(lightness, 0.0F, 1.0F);
+
+  const float chroma = (1.0F - std::abs(2.0F * lightness - 1.0F)) * saturation;
+  const float sector = hue_degrees / 60.0F;
+  const float secondary =
+      chroma * (1.0F - std::abs(std::fmod(sector, 2.0F) - 1.0F));
+  float red = 0.0F;
+  float green = 0.0F;
+  float blue = 0.0F;
+  if (sector < 1.0F) {
+    red = chroma;
+    green = secondary;
+  } else if (sector < 2.0F) {
+    red = secondary;
+    green = chroma;
+  } else if (sector < 3.0F) {
+    green = chroma;
+    blue = secondary;
+  } else if (sector < 4.0F) {
+    green = secondary;
+    blue = chroma;
+  } else if (sector < 5.0F) {
+    red = secondary;
+    blue = chroma;
+  } else {
+    red = chroma;
+    blue = secondary;
+  }
+  const float match = lightness - chroma * 0.5F;
+  return {red + match, green + match, blue + match,
+          std::clamp(alpha, 0.0F, 1.0F)};
+}
+
 SkColor AdjustHsv(SkColor color, float saturation_scale, float value_scale,
                   float minimum_saturation, float minimum_value) {
   const Hsv hsv = ToHsv(color);

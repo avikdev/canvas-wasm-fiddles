@@ -8,6 +8,7 @@
 #include "include/core/SkRefCnt.h"
 
 class WebGlCanvasContext;
+class SkPathEffect;
 
 namespace skia::textlayout {
 class FontCollection;
@@ -29,6 +30,7 @@ private:
 
   std::unique_ptr<WebGlCanvasContext> webgl_;
   sk_sp<skia::textlayout::FontCollection> font_collection_;
+  sk_sp<SkPathEffect> corner_path_effect_;
   std::array<SkPath, 5> letter_paths_;
   std::array<SkPath, 5> letter_stroke_paths_;
   bool initialization_attempted_ = false;

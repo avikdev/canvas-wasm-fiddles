@@ -5,6 +5,9 @@ export const fiddleIds = [
   "elastic-text",
   "sksl-image-proc",
   "shape-intersection",
+  "shape-tracing",
+  "shape-morphing",
+  "vortex-field",
 ] as const;
 
 export type FiddleId = (typeof fiddleIds)[number];

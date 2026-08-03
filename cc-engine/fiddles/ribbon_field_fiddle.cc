@@ -18,11 +18,14 @@
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkPathBuilder.h"
+#include "include/core/SkPathEffect.h"
 #include "include/core/SkPathUtils.h"
 #include "include/core/SkPoint.h"
 #include "include/core/SkRect.h"
 #include "include/core/SkString.h"
+#include "include/core/SkStrokeRec.h"
 #include "include/core/SkSurface.h"
+#include "include/effects/SkCornerPathEffect.h"
 #include "include/pathops/SkPathOps.h"
 #include "modules/skparagraph/include/FontCollection.h"
 #include "modules/skparagraph/include/Paragraph.h"
@@ -47,8 +50,9 @@ constexpr int kDesktopRibbonCount = 16;
 constexpr int kPhoneRibbonCount = kDesktopRibbonCount / 2;
 constexpr int kLetterCount = 5;
 constexpr float kPhoneWidthThreshold = 600.0F;
-constexpr float kGapValue = 2.0F;
-constexpr float kHalfGap = kGapValue * 0.5F;
+constexpr float kRibbonGap = 4.0F;
+constexpr float kHalfRibbonGap = kRibbonGap * 0.5F;
+constexpr float kPieceCornerRadius = 12.0F;
 constexpr float kMinimumPieceDimension = 2.0F;
 constexpr float kMinimumPieceBoundsArea = 8.0F;
 constexpr float kRibbonSaturation = 0.40F;
@@ -58,7 +62,7 @@ constexpr float kLetterValue = 0.96F;
 constexpr float kWaveSegmentWidth = 32.0F;
 constexpr double kFontCycleSeconds = 5.0;
 constexpr char kWord[] = "Hello";
-constexpr SkColor kCanvasColor = SkColorSetRGB(242, 244, 246);
+constexpr SkColor kCanvasColor = SK_ColorWHITE;
 
 struct WaveGeometry {
   float spacing;
@@ -71,7 +75,7 @@ struct ColoredPiece {
 };
 
 WaveGeometry GetWaveGeometry(float height, int ribbon_count) {
-  const float usable_height = std::max(1.0F, height - kGapValue * 2.0F);
+  const float usable_height = std::max(1.0F, height - kRibbonGap * 2.0F);
   float total_weight = 0.0F;
   for (int ribbon = 0; ribbon < ribbon_count; ++ribbon) {
     const float distance_from_middle =
@@ -104,7 +108,7 @@ float BoundaryBaseY(int boundary, float height, int ribbon_count) {
   for (int ribbon = 0; ribbon <= boundary; ++ribbon) {
     weighted_position += RibbonWeight(ribbon, ribbon_count);
   }
-  return kGapValue + geometry.spacing * weighted_position;
+  return kRibbonGap + geometry.spacing * weighted_position;
 }
 
 float BoundaryY(int boundary, float x, double time_seconds, float height,
@@ -170,33 +174,33 @@ void AppendWave(SkPathBuilder *builder, int boundary, float start_x,
 
 SkPath BuildRibbonPath(int ribbon, float width, float height,
                        double time_seconds, int ribbon_count) {
-  const float left = kGapValue;
-  const float right = std::max(left, width - kGapValue);
-  const float top = ribbon == 0 ? kGapValue
+  const float left = kRibbonGap;
+  const float right = std::max(left, width - kRibbonGap);
+  const float top = ribbon == 0 ? kRibbonGap
                                 : BoundaryY(ribbon - 1, left, time_seconds,
                                             height, ribbon_count) +
-                                      kHalfGap;
+                                      kHalfRibbonGap;
   const float bottom =
       ribbon == ribbon_count - 1
-          ? height - kGapValue
+          ? height - kRibbonGap
           : BoundaryY(ribbon, right, time_seconds, height, ribbon_count) -
-                kHalfGap;
+                kHalfRibbonGap;
 
   SkPathBuilder builder;
   builder.moveTo(left, top);
   if (ribbon == 0) {
-    builder.lineTo(right, kGapValue);
+    builder.lineTo(right, kRibbonGap);
   } else {
-    AppendWave(&builder, ribbon - 1, left, right, kHalfGap, time_seconds,
+    AppendWave(&builder, ribbon - 1, left, right, kHalfRibbonGap, time_seconds,
                height, ribbon_count);
   }
 
   builder.lineTo(right, bottom);
   if (ribbon == ribbon_count - 1) {
-    builder.lineTo(left, height - kGapValue);
+    builder.lineTo(left, height - kRibbonGap);
   } else {
-    AppendWave(&builder, ribbon, right, left, -kHalfGap, time_seconds, height,
-               ribbon_count);
+    AppendWave(&builder, ribbon, right, left, -kHalfRibbonGap, time_seconds,
+               height, ribbon_count);
   }
   builder.close();
   return builder.detach();
@@ -229,6 +233,35 @@ bool IsRenderablePiece(const SkPath &path) {
   return bounds.width() >= kMinimumPieceDimension &&
          bounds.height() >= kMinimumPieceDimension &&
          bounds.width() * bounds.height() >= kMinimumPieceBoundsArea;
+}
+
+std::optional<SkPath> RoundedPiece(const SkPath &path,
+                                   const SkPathEffect &effect) {
+  SkStrokeRec stroke_record(SkStrokeRec::kFill_InitStyle);
+  SkPathBuilder builder;
+  if (!effect.filterPath(&builder, path, &stroke_record)) {
+    return std::nullopt;
+  }
+  SkPath rounded = NormalizeFilledPath(builder.detach());
+  if (stroke_record.needToApply()) {
+    SkPathBuilder stroked_builder;
+    if (!stroke_record.applyToPath(&stroked_builder, rounded)) {
+      return std::nullopt;
+    }
+    rounded = NormalizeFilledPath(stroked_builder.detach());
+  }
+  if (!IsRenderablePiece(rounded)) {
+    return std::nullopt;
+  }
+  return rounded;
+}
+
+void AppendRoundedPiece(std::vector<ColoredPiece> *pieces, SkPath path,
+                        SkColor4f color, const SkPathEffect &effect) {
+  std::optional<SkPath> rounded = RoundedPiece(path, effect);
+  if (rounded.has_value()) {
+    pieces->push_back({std::move(*rounded), color});
+  }
 }
 
 template <std::size_t Size>
@@ -273,7 +306,8 @@ RibbonFieldFiddle::~RibbonFieldFiddle() = default;
 bool RibbonFieldFiddle::UsesWebGl() const { return true; }
 
 bool RibbonFieldFiddle::EnsureResources() {
-  if (webgl_ != nullptr && font_collection_ != nullptr) {
+  if (webgl_ != nullptr && font_collection_ != nullptr &&
+      corner_path_effect_ != nullptr) {
     return true;
   }
   if (initialization_attempted_) {
@@ -296,6 +330,10 @@ bool RibbonFieldFiddle::EnsureResources() {
 
   font_collection_ = sk_make_sp<skia::textlayout::FontCollection>();
   font_collection_->setDefaultFontManager(font_manager, "Roboto");
+  corner_path_effect_ = SkCornerPathEffect::Make(kPieceCornerRadius);
+  if (corner_path_effect_ == nullptr) {
+    return false;
+  }
   webgl_ = std::move(webgl);
   std::cout << "[cc-engine/stdout] Ribbon field Skia path, paragraph, and "
                "Path Ops resources ready."
@@ -387,7 +425,7 @@ bool RibbonFieldFiddle::RebuildLetterPaths(int font_index, float width,
 
   SkPaint stroke_paint;
   stroke_paint.setStyle(SkPaint::kStroke_Style);
-  stroke_paint.setStrokeWidth(kGapValue);
+  stroke_paint.setStrokeWidth(kRibbonGap);
   stroke_paint.setStrokeCap(SkPaint::kRound_Cap);
   stroke_paint.setStrokeJoin(SkPaint::kRound_Join);
 
@@ -468,7 +506,8 @@ void RibbonFieldFiddle::Render(double time_seconds) {
         Op(ribbons[ribbon], all_letters, kDifference_SkPathOp);
     if (!outside.has_value() || !IsRenderablePiece(*outside)) {
       if (IsRenderablePiece(ribbons[ribbon])) {
-        pieces.push_back({ribbons[ribbon], ribbon_color});
+        AppendRoundedPiece(&pieces, ribbons[ribbon], ribbon_color,
+                           *corner_path_effect_);
       }
       continue;
     }
@@ -495,8 +534,8 @@ void RibbonFieldFiddle::Render(double time_seconds) {
 
       int color_index = letter % 2 == 0 ? ribbon + letter : ribbon - letter;
       color_index = (color_index % ribbon_count + ribbon_count) % ribbon_count;
-      if (color_index == letter) {
-        color_index = (letter + 1) % ribbon_count;
+      if (color_index == ribbon) {
+        color_index = (ribbon + 1) % ribbon_count;
       }
       ribbon_pieces.push_back(
           {std::move(*overlap),
@@ -505,15 +544,18 @@ void RibbonFieldFiddle::Render(double time_seconds) {
     }
 
     if (path_ops_failed) {
-      // Keep a transient Path Ops failure from exposing the canvas for a
-      // single frame. The intact ribbon still retains the text-stroke gap.
-      if (IsRenderablePiece(ribbons[ribbon])) {
-        pieces.push_back({ribbons[ribbon], ribbon_color});
+      // Do not replace colored letter shards with an intact ribbon for one
+      // frame: that fallback was the visible color flash. Retain only the
+      // successfully computed pieces from this global ribbon.
+      for (ColoredPiece &piece : ribbon_pieces) {
+        AppendRoundedPiece(&pieces, std::move(piece.path), piece.color,
+                           *corner_path_effect_);
       }
       continue;
     }
     for (ColoredPiece &piece : ribbon_pieces) {
-      pieces.push_back(std::move(piece));
+      AppendRoundedPiece(&pieces, std::move(piece.path), piece.color,
+                         *corner_path_effect_);
     }
   }
 
@@ -522,15 +564,6 @@ void RibbonFieldFiddle::Render(double time_seconds) {
   paint.setStyle(SkPaint::kFill_Style);
   for (const ColoredPiece &piece : pieces) {
     paint.setColor4f(piece.color);
-    canvas->drawPath(piece.path, paint);
-  }
-
-  paint.setStyle(SkPaint::kStroke_Style);
-  paint.setStrokeWidth(1.0F);
-  paint.setStrokeCap(SkPaint::kRound_Cap);
-  paint.setStrokeJoin(SkPaint::kRound_Join);
-  paint.setColor(SK_ColorBLACK);
-  for (const ColoredPiece &piece : pieces) {
     canvas->drawPath(piece.path, paint);
   }
 

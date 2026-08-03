@@ -117,7 +117,10 @@ let navOpen = $state(true);
             {selected.id === "skia-webgl" ||
             selected.id === "ribbon-field" ||
             selected.id === "elastic-text" ||
-            selected.id === "sksl-image-proc"
+            selected.id === "sksl-image-proc" ||
+            selected.id === "shape-tracing" ||
+            selected.id === "shape-morphing" ||
+            selected.id === "vortex-field"
               ? "Skia Ganesh / WebGL"
               : selected.id === "skia-cpu"
                 ? "Skia Raster / CPU"

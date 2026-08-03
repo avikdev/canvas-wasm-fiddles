@@ -16,6 +16,12 @@ cc_library(
 )
 
 cc_test(
+    name = "color_utils_test",
+    srcs = ["color_utils_test.cc"],
+    deps = [":color_utils"],
+)
+
+cc_test(
     name = "random_permutation_test",
     srcs = ["random_permutation_test.cc"],
     deps = [":random_permutation"],

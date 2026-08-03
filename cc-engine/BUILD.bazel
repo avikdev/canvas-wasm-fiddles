@@ -47,9 +47,12 @@ cc_library(
         "//fiddles:elastic_text_fiddle",
         "//fiddles:ribbon_field_fiddle",
         "//fiddles:shape_intersection_fiddle",
+        "//fiddles:shape_morphing_fiddle",
+        "//fiddles:shape_tracing_fiddle",
         "//fiddles:skia_cpu_fiddle",
         "//fiddles:skia_webgl_fiddle",
         "//fiddles:sksl_image_proc_fiddle",
+        "//fiddles:vortex_field_fiddle",
     ],
 )
 

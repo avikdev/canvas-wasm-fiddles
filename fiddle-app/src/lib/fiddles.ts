@@ -61,4 +61,31 @@ export const fiddles = [
     color: "#b8e0d4",
     initials: "SI",
   },
+  {
+    id: "shape-tracing",
+    title: "Shape tracing",
+    summary:
+      "A tangent arrow traces every contour of an outlined glyph while contour-relative markers expose path distance and direction.",
+    technique: "SkPathMeasure · text outlines · WebGL",
+    color: "#67d9e8",
+    initials: "ST",
+  },
+  {
+    id: "shape-morphing",
+    title: "Shape Morphing",
+    summary:
+      "A Skia geometry engine synchronizes curve subdivision to continuously morph an outlined B into an S.",
+    technique: "Canonical cubics · arc length · WebGL",
+    color: "#a78bfa",
+    initials: "SM",
+  },
+  {
+    id: "vortex-field",
+    title: "Vortex Field",
+    summary:
+      "Four counter-rotating local fields spiral filled compound shapes while following collision-aware coverage paths.",
+    technique: "Catmull–Rom · Path Ops · WebGL",
+    color: "#f47cb6",
+    initials: "VF",
+  },
 ] as const satisfies readonly Fiddle[];

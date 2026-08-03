@@ -8,9 +8,12 @@
 #include "fiddles/elastic_text_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
 #include "fiddles/shape_intersection_fiddle.h"
+#include "fiddles/shape_morphing_fiddle.h"
+#include "fiddles/shape_tracing_fiddle.h"
 #include "fiddles/skia_cpu_fiddle.h"
 #include "fiddles/skia_webgl_fiddle.h"
 #include "fiddles/sksl_image_proc_fiddle.h"
+#include "fiddles/vortex_field_fiddle.h"
 
 namespace {
 
@@ -38,6 +41,18 @@ std::unique_ptr<FiddleBase> CreateShapeIntersection() {
   return std::make_unique<ShapeIntersectionFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateShapeTracing() {
+  return std::make_unique<ShapeTracingFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateShapeMorphing() {
+  return std::make_unique<ShapeMorphingFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateVortexField() {
+  return std::make_unique<VortexFieldFiddle>();
+}
+
 } // namespace
 
 FiddleManager::FiddleManager(emscripten::val canvas,
@@ -49,13 +64,17 @@ FiddleManager::FiddleManager(emscripten::val canvas,
   registry_.Register("elastic-text", &CreateElasticText);
   registry_.Register("sksl-image-proc", &CreateSkslImageProc);
   registry_.Register("shape-intersection", &CreateShapeIntersection);
+  registry_.Register("shape-tracing", &CreateShapeTracing);
+  registry_.Register("shape-morphing", &CreateShapeMorphing);
+  registry_.Register("vortex-field", &CreateVortexField);
 
   width_ = canvas_["width"].as<double>();
   height_ = canvas_["height"].as<double>();
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
             << "ribbon-field, skia-webgl, skia-cpu, elastic-text, "
-               "sksl-image-proc, and shape-intersection."
+               "sksl-image-proc, shape-intersection, shape-tracing, "
+               "shape-morphing, and vortex-field."
             << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
