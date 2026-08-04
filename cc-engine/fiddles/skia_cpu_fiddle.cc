@@ -17,8 +17,8 @@ double ElapsedMilliseconds(TimingClock::time_point start,
 } // namespace
 
 void SkiaCpuFiddle::Render(double time_seconds) {
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
 
   const auto surface_start = TimingClock::now();
   SkSurface *surface = raster_.AcquireSurface(width, height);
@@ -34,7 +34,7 @@ void SkiaCpuFiddle::Render(double time_seconds) {
       ElapsedMilliseconds(scene_start, TimingClock::now());
 
   const auto present_start = TimingClock::now();
-  raster_.Present(Context());
+  raster_.Present(CpuResource());
   const double present_ms =
       ElapsedMilliseconds(present_start, TimingClock::now());
 

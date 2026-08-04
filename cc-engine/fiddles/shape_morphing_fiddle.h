@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkRefCnt.h"
 #include "morphing/shape_morpher.h"
@@ -11,15 +11,12 @@
 class SkTypeface;
 class WebGlCanvasContext;
 
-class ShapeMorphingFiddle final : public FiddleBase {
+class ShapeMorphingFiddle final : public FiddleBaseWebGL {
 public:
   ShapeMorphingFiddle();
   ~ShapeMorphingFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

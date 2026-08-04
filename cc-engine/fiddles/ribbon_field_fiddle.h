@@ -3,7 +3,7 @@
 #include <array>
 #include <memory>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkRefCnt.h"
 
@@ -14,15 +14,12 @@ namespace skia::textlayout {
 class FontCollection;
 } // namespace skia::textlayout
 
-class RibbonFieldFiddle final : public FiddleBase {
+class RibbonFieldFiddle final : public FiddleBaseWebGL {
 public:
   RibbonFieldFiddle();
   ~RibbonFieldFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

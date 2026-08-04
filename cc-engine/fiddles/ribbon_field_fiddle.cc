@@ -303,8 +303,6 @@ RibbonFieldFiddle::RibbonFieldFiddle() = default;
 
 RibbonFieldFiddle::~RibbonFieldFiddle() = default;
 
-bool RibbonFieldFiddle::UsesWebGl() const { return true; }
-
 bool RibbonFieldFiddle::EnsureResources() {
   if (webgl_ != nullptr && font_collection_ != nullptr &&
       corner_path_effect_ != nullptr) {
@@ -316,7 +314,7 @@ bool RibbonFieldFiddle::EnsureResources() {
   initialization_attempted_ = true;
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
 
@@ -456,8 +454,8 @@ void RibbonFieldFiddle::Render(double time_seconds) {
     return;
   }
 
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
   const int ribbon_count =
       Width() <= kPhoneWidthThreshold ? kPhoneRibbonCount : kDesktopRibbonCount;
   SkSurface *surface = webgl_->AcquireSurface(width, height);

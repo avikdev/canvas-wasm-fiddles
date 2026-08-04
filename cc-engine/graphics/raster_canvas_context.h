@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <vector>
 
-#include <emscripten/val.h>
-
 #include "include/core/SkRefCnt.h"
 
+class CpuCanvasResource;
 class SkSurface;
 
 // A CPU SkSurface whose pixels live directly in Wasm linear memory. Presenting
@@ -19,7 +18,7 @@ public:
   ~RasterCanvasContext();
 
   SkSurface *AcquireSurface(int width, int height);
-  void Present(const emscripten::val &context);
+  void Present(CpuCanvasResource &resource);
 
 private:
   bool RecreateSurface(int width, int height);

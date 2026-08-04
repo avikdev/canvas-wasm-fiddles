@@ -1,10 +1,10 @@
 #pragma once
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "fiddles/skia_pulse_benchmark.h"
 #include "graphics/raster_canvas_context.h"
 
-class SkiaCpuFiddle final : public FiddleBase {
+class SkiaCpuFiddle final : public FiddleBaseCpu {
 public:
   void Render(double time_seconds) override;
 

@@ -3,7 +3,7 @@
 #include <array>
 #include <memory>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkRefCnt.h"
 
 class SkImage;
@@ -11,15 +11,12 @@ class SkShader;
 class SkTypeface;
 class WebGlCanvasContext;
 
-class SkslImageProcFiddle final : public FiddleBase {
+class SkslImageProcFiddle final : public FiddleBaseWebGL {
 public:
   SkslImageProcFiddle();
   ~SkslImageProcFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

@@ -1,15 +1,16 @@
 /// <reference lib="webworker" />
 
-import type { CanvasWorkerMessage, FiddleId } from "./index";
+import type { CanvasWorkerMessage } from "./index";
 import CreateCanvasDemoModule, { type FiddleManager } from "./wasm/demo.js";
 
 let fiddleManager: FiddleManager | undefined;
-let selectedFiddle: FiddleId = "ribbon-field";
+let selectedFiddle = "ribbon-field";
 let width = 1;
 let height = 1;
 let dpr = 1;
 let assetBaseUrl = "/";
 let animationFrame = 0;
+let animationPaused = false;
 let previousFrameTime: number | undefined;
 let didReportFirstFrame = false;
 
@@ -113,7 +114,9 @@ function render(now: number) {
     reportError(error);
     return;
   }
-  animationFrame = requestAnimationFrame(render);
+  if (!animationPaused) {
+    animationFrame = requestAnimationFrame(render);
+  }
 }
 
 self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
@@ -125,6 +128,7 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     width = message.width;
     height = message.height;
     dpr = message.dpr;
+    animationPaused = message.paused;
 
     const wasmModule = await createWasmModule();
     await Promise.all([loadExternalFonts(wasmModule), loadExternalImages(wasmModule)]);
@@ -136,7 +140,9 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     previousFrameTime = undefined;
     didReportFirstFrame = false;
     cancelAnimationFrame(animationFrame);
-    animationFrame = requestAnimationFrame(render);
+    if (!animationPaused) {
+      animationFrame = requestAnimationFrame(render);
+    }
     return;
   }
 
@@ -148,7 +154,22 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     return;
   }
 
-  selectedFiddle = message.fiddle;
-  const didSelect = fiddleManager?.selectFiddle(selectedFiddle);
-  reportLog(`Selected ${selectedFiddle}: ${String(didSelect)}`);
+  if (message.type === "animation") {
+    if (animationPaused === message.paused) {
+      return;
+    }
+    animationPaused = message.paused;
+    cancelAnimationFrame(animationFrame);
+    if (!animationPaused) {
+      previousFrameTime = undefined;
+      animationFrame = requestAnimationFrame(render);
+    }
+    return;
+  }
+
+  if (message.type === "select") {
+    selectedFiddle = message.fiddle;
+    const didSelect = fiddleManager?.selectFiddle(selectedFiddle);
+    reportLog(`Selected ${selectedFiddle}: ${String(didSelect)}`);
+  }
 };

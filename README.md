@@ -36,6 +36,16 @@ remote before running it.
 
 ## About the fiddles
 
+### Contour Lines
+
+This prototype turns a time-varying scalar field into editable vector
+topography. Marching Squares extracts threshold crossings, shared grid-edge
+identities stitch unordered segments into continuous contours, and
+Catmull–Rom interpolation converts those polylines into cubic Bézier paths.
+Filled isobands demonstrate how the same sampled field can partition a canvas
+into regions suitable for maps, heat fields, scientific plots, and procedural
+artwork.
+
 ### Ribbon field
 
 This prototype validates the vector-text pipeline needed by a design editor:
@@ -71,6 +81,15 @@ families, inline styles, line breaking, clipping, and horizontal and vertical
 alignment while its container continuously changes width. It demonstrates how
 editable text can reflow predictably inside resizable frames and how alignment
 controls can map onto the underlying layout engine.
+
+### Envelope Distort
+
+This prototype implements vector envelope warping as a bicubic Bézier
+free-form deformation. Skia Paragraph glyph outlines are densely subdivided,
+normalized into the patch's parameter domain, and evaluated through an animated
+4 × 4 control lattice. Because the mapping operates on compound path contours
+instead of a rasterized text image, counters remain holes and the result stays
+editable vector geometry.
 
 ### SkSL Image Proc
 
@@ -114,8 +133,7 @@ The source fill rule is retained so compound-path holes survive deformation.
 Build the standalone Wasm demo separately:
 
 ```sh
-cd cc-engine
-./scripts/build-and-export.sh
+./scripts/wasm-build-and-export
 ```
 
 Select **Skia Drawing (WebGL)** in the app to run the native Skia Ganesh demo.

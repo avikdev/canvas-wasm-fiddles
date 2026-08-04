@@ -3,39 +3,10 @@
 #include <algorithm>
 #include <iostream>
 
-#include <emscripten/emscripten.h>
-
+#include "core/fiddle_base.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkSurface.h"
-
-namespace {
-
-// clang-format off
-EM_JS(void, PutRasterPixels,
-      (emscripten::EM_VAL context_handle, std::uintptr_t pixel_pointer,
-       int width, int height, std::size_t byte_length), {
-        const context = Emval.toValue(context_handle);
-        let frame = context.__skiaRasterFrame;
-        if (!frame || frame.buffer !== HEAPU8.buffer ||
-            frame.pixelPointer !== pixel_pointer || frame.width !== width ||
-            frame.height !== height) {
-          const pixels = new Uint8ClampedArray(
-              HEAPU8.buffer, pixel_pointer, byte_length);
-          frame = {
-            buffer : HEAPU8.buffer,
-            pixelPointer : pixel_pointer,
-            width,
-            height,
-            imageData : new ImageData(pixels, width, height),
-          };
-          context.__skiaRasterFrame = frame;
-        }
-        context.putImageData(frame.imageData, 0, 0);
-      });
-// clang-format on
-
-} // namespace
 
 RasterCanvasContext::RasterCanvasContext() = default;
 
@@ -53,10 +24,9 @@ SkSurface *RasterCanvasContext::AcquireSurface(int width, int height) {
   return surface_.get();
 }
 
-void RasterCanvasContext::Present(const emscripten::val &context) {
-  PutRasterPixels(context.as_handle(),
-                  reinterpret_cast<std::uintptr_t>(pixels_.data()),
-                  surface_width_, surface_height_, pixels_.size());
+void RasterCanvasContext::Present(CpuCanvasResource &resource) {
+  resource.PresentPixels(pixels_.data(), surface_width_, surface_height_,
+                         pixels_.size());
 }
 
 bool RasterCanvasContext::RecreateSurface(int width, int height) {

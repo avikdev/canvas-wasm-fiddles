@@ -230,8 +230,6 @@ ShapeMorphingFiddle::ShapeMorphingFiddle() {
 
 ShapeMorphingFiddle::~ShapeMorphingFiddle() = default;
 
-bool ShapeMorphingFiddle::UsesWebGl() const { return true; }
-
 bool ShapeMorphingFiddle::EnsureResources() {
   if (webgl_ != nullptr && typeface_ != nullptr) {
     return true;
@@ -260,7 +258,7 @@ bool ShapeMorphingFiddle::EnsureResources() {
   }
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
   webgl_ = std::move(webgl);
@@ -320,8 +318,8 @@ void ShapeMorphingFiddle::Render(double time_seconds) {
     return;
   }
 
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;

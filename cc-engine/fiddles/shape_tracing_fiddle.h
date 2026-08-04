@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkRefCnt.h"
 
@@ -18,15 +18,12 @@ struct TracedPathSegment {
   float hue = 0.0F;
 };
 
-class ShapeTracingFiddle final : public FiddleBase {
+class ShapeTracingFiddle final : public FiddleBaseWebGL {
 public:
   ShapeTracingFiddle();
   ~ShapeTracingFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

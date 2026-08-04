@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkRefCnt.h"
 
 class SkTypeface;
@@ -15,15 +15,12 @@ class FontCollection;
 class Paragraph;
 } // namespace skia::textlayout
 
-class ElasticTextFiddle final : public FiddleBase {
+class ElasticTextFiddle final : public FiddleBaseWebGL {
 public:
   ElasticTextFiddle();
   ~ElasticTextFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

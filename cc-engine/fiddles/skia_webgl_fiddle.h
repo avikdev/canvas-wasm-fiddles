@@ -2,20 +2,17 @@
 
 #include <memory>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "fiddles/skia_pulse_benchmark.h"
 
 class WebGlCanvasContext;
 
-class SkiaWebGlFiddle final : public FiddleBase {
+class SkiaWebGlFiddle final : public FiddleBaseWebGL {
 public:
   SkiaWebGlFiddle();
   ~SkiaWebGlFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureWebGl();

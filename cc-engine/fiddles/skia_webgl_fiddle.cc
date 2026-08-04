@@ -22,8 +22,6 @@ SkiaWebGlFiddle::SkiaWebGlFiddle() = default;
 
 SkiaWebGlFiddle::~SkiaWebGlFiddle() = default;
 
-bool SkiaWebGlFiddle::UsesWebGl() const { return true; }
-
 bool SkiaWebGlFiddle::EnsureWebGl() {
   if (webgl_ != nullptr) {
     return true;
@@ -34,7 +32,7 @@ bool SkiaWebGlFiddle::EnsureWebGl() {
   initialization_attempted_ = true;
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
   webgl_ = std::move(webgl);
@@ -46,8 +44,8 @@ void SkiaWebGlFiddle::Render(double time_seconds) {
     return;
   }
 
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
 
   const auto surface_start = TimingClock::now();
   SkSurface *surface = webgl_->AcquireSurface(width, height);

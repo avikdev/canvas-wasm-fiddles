@@ -15,6 +15,18 @@ cc_library(
     hdrs = ["random_permutation.h"],
 )
 
+cc_library(
+    name = "perlin_noise",
+    srcs = ["perlin_noise.cc"],
+    hdrs = ["perlin_noise.h"],
+)
+
+cc_test(
+    name = "perlin_noise_test",
+    srcs = ["perlin_noise_test.cc"],
+    deps = [":perlin_noise"],
+)
+
 cc_test(
     name = "color_utils_test",
     srcs = ["color_utils_test.cc"],

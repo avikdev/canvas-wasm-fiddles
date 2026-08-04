@@ -117,8 +117,6 @@ ElasticTextFiddle::ElasticTextFiddle()
 
 ElasticTextFiddle::~ElasticTextFiddle() = default;
 
-bool ElasticTextFiddle::UsesWebGl() const { return true; }
-
 bool ElasticTextFiddle::EnsureResources() {
   if (webgl_ != nullptr && font_collection_ != nullptr &&
       label_typeface_ != nullptr && bold_label_typeface_ != nullptr) {
@@ -130,7 +128,7 @@ bool ElasticTextFiddle::EnsureResources() {
   initialization_attempted_ = true;
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
 
@@ -282,8 +280,8 @@ void ElasticTextFiddle::Render(double time_seconds) {
     return;
   }
 
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;

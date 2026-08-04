@@ -1,12 +1,10 @@
 #pragma once
 
-#include <emscripten/html5_webgl.h>
-#include <emscripten/val.h>
-
 #include "include/core/SkRefCnt.h"
 
 class GrDirectContext;
 class SkSurface;
+class WebGlCanvasResource;
 
 struct WebGlPresentResult {
   bool success = false;
@@ -14,8 +12,8 @@ struct WebGlPresentResult {
   double submit_ms = 0.0;
 };
 
-// Owns the Emscripten WebGL context and a Ganesh surface that wraps the
-// browser canvas's default framebuffer (FBO 0).
+// Owns a Ganesh surface that wraps a platform-provided WebGL default
+// framebuffer (FBO 0). The platform context itself remains in the resource.
 class WebGlCanvasContext final {
 public:
   WebGlCanvasContext();
@@ -24,7 +22,7 @@ public:
   WebGlCanvasContext(const WebGlCanvasContext &) = delete;
   WebGlCanvasContext &operator=(const WebGlCanvasContext &) = delete;
 
-  bool Initialize(const emscripten::val &canvas);
+  bool Initialize(WebGlCanvasResource &resource);
   SkSurface *AcquireSurface(int width, int height);
   WebGlPresentResult FlushAndPresent();
 
@@ -32,10 +30,9 @@ private:
   bool MakeCurrent();
   bool RecreateSurface(int width, int height);
 
-  EMSCRIPTEN_WEBGL_CONTEXT_HANDLE webgl_context_ = 0;
+  WebGlCanvasResource *resource_ = nullptr;
   sk_sp<GrDirectContext> direct_context_;
   sk_sp<SkSurface> surface_;
   int surface_width_ = 0;
   int surface_height_ = 0;
-  int webgl_version_ = 0;
 };

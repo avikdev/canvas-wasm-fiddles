@@ -1,26 +1,13 @@
-export const fiddleIds = [
-  "ribbon-field",
-  "skia-webgl",
-  "skia-cpu",
-  "elastic-text",
-  "sksl-image-proc",
-  "shape-intersection",
-  "shape-tracing",
-  "shape-morphing",
-  "vortex-field",
-] as const;
-
-export type FiddleId = (typeof fiddleIds)[number];
-
 export type CanvasWorkerMessage =
   | {
       type: "init";
       canvas: OffscreenCanvas;
-      fiddle: FiddleId;
+      fiddle: string;
       assetBaseUrl: string;
       width: number;
       height: number;
       dpr: number;
+      paused: boolean;
     }
   | {
       type: "resize";
@@ -30,7 +17,11 @@ export type CanvasWorkerMessage =
     }
   | {
       type: "select";
-      fiddle: FiddleId;
+      fiddle: string;
+    }
+  | {
+      type: "animation";
+      paused: boolean;
     };
 
 export type CanvasWorkerStatus =

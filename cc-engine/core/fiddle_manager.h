@@ -3,21 +3,21 @@
 #include <memory>
 #include <string>
 
-#include <emscripten/val.h>
-
-#include "fiddle_base.h"
-#include "fiddle_registry.h"
+#include "core/fiddle_base.h"
+#include "core/fiddle_registry.h"
 
 class FiddleManager {
- public:
-  FiddleManager(emscripten::val canvas, const std::string& initial_key);
+public:
+  FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
+                double initial_width, double initial_height,
+                const std::string &initial_key);
 
-  bool SelectFiddle(const std::string& key);
+  bool SelectFiddle(const std::string &key);
   void Resize(double width, double height, double device_pixel_ratio);
   void Tick(double delta_seconds);
 
- private:
-  emscripten::val canvas_;
+private:
+  FiddleCanvasResourceProvider &canvas_resources_;
   FiddleRegistry registry_;
   std::unique_ptr<FiddleBase> active_fiddle_;
   std::string active_key_;

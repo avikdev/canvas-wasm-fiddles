@@ -6,8 +6,8 @@
 #include <utility>
 
 #include <GLES2/gl2.h>
-#include <emscripten/emscripten.h>
 
+#include "core/fiddle_base.h"
 #include "include/core/SkColorSpace.h"
 #include "include/core/SkSurface.h"
 #include "include/gpu/ganesh/GrBackendSurface.h"
@@ -30,36 +30,12 @@ double ElapsedMilliseconds(TimingClock::time_point start,
   return std::chrono::duration<double, std::milli>(end - start).count();
 }
 
-// CanvasKit's WebGL helper ultimately calls GL.createContext(canvas, attrs).
-// Calling it with the actual OffscreenCanvas is important in a worker because
-// modern Emscripten selector lookup cannot use document.querySelector there.
-EM_JS(EMSCRIPTEN_WEBGL_CONTEXT_HANDLE, CreateEmscriptenWebGlContext,
-      (emscripten::EM_VAL canvas_handle, int major_version), {
-        const canvas = Emval.toValue(canvas_handle);
-        return GL.createContext(canvas, {
-          alpha : true,
-          depth : false,
-          stencil : true,
-          antialias : false,
-          premultipliedAlpha : true,
-          preserveDrawingBuffer : false,
-          powerPreference : "default",
-          failIfMajorPerformanceCaveat : false,
-          majorVersion : major_version,
-          minorVersion : 0,
-          enableExtensionsByDefault : true,
-          explicitSwapControl : false,
-          proxyContextToMainThread : 0,
-          renderViaOffscreenBackBuffer : false,
-        });
-      });
-
 } // namespace
 
 WebGlCanvasContext::WebGlCanvasContext() = default;
 
 WebGlCanvasContext::~WebGlCanvasContext() {
-  if (webgl_context_ <= 0) {
+  if (resource_ == nullptr) {
     return;
   }
 
@@ -68,28 +44,13 @@ WebGlCanvasContext::~WebGlCanvasContext() {
   }
   surface_.reset();
   direct_context_.reset();
-  emscripten_webgl_destroy_context(webgl_context_);
 }
 
-bool WebGlCanvasContext::Initialize(const emscripten::val &canvas) {
+bool WebGlCanvasContext::Initialize(WebGlCanvasResource &resource) {
   if (direct_context_ != nullptr) {
     return true;
   }
-
-  // Prefer WebGL 2, then retain CanvasKit's ability to run on WebGL 1.
-  webgl_context_ = CreateEmscriptenWebGlContext(canvas.as_handle(), 2);
-  webgl_version_ = 2;
-  if (webgl_context_ <= 0) {
-    webgl_context_ = CreateEmscriptenWebGlContext(canvas.as_handle(), 1);
-    webgl_version_ = 1;
-  }
-
-  if (webgl_context_ <= 0) {
-    std::cerr << "[cc-engine/stderr] Emscripten could not create a WebGL "
-                 "context for the worker OffscreenCanvas."
-              << std::endl;
-    return false;
-  }
+  resource_ = &resource;
   if (!MakeCurrent()) {
     return false;
   }
@@ -110,7 +71,7 @@ bool WebGlCanvasContext::Initialize(const emscripten::val &canvas) {
     return false;
   }
 
-  std::cout << "[cc-engine/stdout] Skia Ganesh/WebGL " << webgl_version_
+  std::cout << "[cc-engine/stdout] Skia Ganesh/WebGL " << resource_->Version()
             << " context ready." << std::endl;
   return true;
 }
@@ -155,14 +116,13 @@ WebGlPresentResult WebGlCanvasContext::FlushAndPresent() {
 }
 
 bool WebGlCanvasContext::MakeCurrent() {
-  if (webgl_context_ <= 0) {
+  if (resource_ == nullptr) {
     return false;
   }
-  const EMSCRIPTEN_RESULT result =
-      emscripten_webgl_make_context_current(webgl_context_);
-  if (result != EMSCRIPTEN_RESULT_SUCCESS) {
-    std::cerr << "[cc-engine/stderr] Could not make the WebGL context current "
-              << "(Emscripten result " << result << ")." << std::endl;
+  if (!resource_->MakeCurrent()) {
+    std::cerr << "[cc-engine/stderr] Could not make the platform WebGL "
+                 "context current."
+              << std::endl;
     return false;
   }
   return true;

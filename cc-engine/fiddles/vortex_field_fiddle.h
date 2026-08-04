@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkColor.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkPoint.h"
@@ -36,15 +36,12 @@ struct VortexMotionState {
   int waypoint_index = 0;
 };
 
-class VortexFieldFiddle final : public FiddleBase {
+class VortexFieldFiddle final : public FiddleBaseWebGL {
 public:
   VortexFieldFiddle();
   ~VortexFieldFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureResources();

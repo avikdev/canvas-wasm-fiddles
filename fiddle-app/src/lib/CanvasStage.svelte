@@ -1,13 +1,10 @@
 <script lang="ts">
-import type {
-  CanvasWorkerMessage,
-  CanvasWorkerStatus,
-  FiddleId,
-} from "@canvas-wasm-fiddles/canvas-worker";
+import type { CanvasWorkerMessage, CanvasWorkerStatus } from "@canvas-wasm-fiddles/canvas-worker";
 import CanvasWorker from "@canvas-wasm-fiddles/canvas-worker/worker?worker";
 import { onMount } from "svelte";
+import type { FiddleId } from "./fiddles";
 
-let { fiddle }: { fiddle: FiddleId } = $props();
+let { fiddle, paused }: { fiddle: FiddleId; paused: boolean } = $props();
 let canvasElement: HTMLCanvasElement;
 let stageElement: HTMLDivElement;
 let worker: Worker | undefined;
@@ -16,6 +13,10 @@ let supported = $state(true);
 function send(message: CanvasWorkerMessage, transfer?: Transferable[]) {
   worker?.postMessage(message, transfer ?? []);
 }
+
+$effect(() => {
+  send({ type: "animation", paused });
+});
 
 onMount(() => {
   if (!canvasElement.transferControlToOffscreen) {
@@ -63,6 +64,7 @@ onMount(() => {
       canvas: offscreen,
       fiddle,
       assetBaseUrl: import.meta.env.BASE_URL,
+      paused,
       ...dimensions,
     },
     [offscreen],

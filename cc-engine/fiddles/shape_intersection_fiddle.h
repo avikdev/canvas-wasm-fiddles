@@ -2,21 +2,18 @@
 
 #include <memory>
 
-#include "fiddle_base.h"
+#include "core/fiddle_base.h"
 #include "include/core/SkRefCnt.h"
 
 class SkTypeface;
 class WebGlCanvasContext;
 
-class ShapeIntersectionFiddle final : public FiddleBase {
+class ShapeIntersectionFiddle final : public FiddleBaseWebGL {
 public:
   ShapeIntersectionFiddle();
   ~ShapeIntersectionFiddle() override;
 
   void Render(double time_seconds) override;
-
-protected:
-  bool UsesWebGl() const override;
 
 private:
   bool EnsureWebGl();

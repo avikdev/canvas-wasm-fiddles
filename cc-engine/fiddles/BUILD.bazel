@@ -3,6 +3,46 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "contour_lines_fiddle",
+    srcs = ["contour_lines_fiddle.cc"],
+    hdrs = ["contour_lines_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:catmull_rom_spline",
+        "//geometry:marching_squares",
+        "//graphics:webgl_canvas_context",
+        "//utils:color_utils",
+        "//utils:perlin_noise",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "envelope_distort_fiddle",
+    srcs = ["envelope_distort_fiddle.cc"],
+    hdrs = ["envelope_distort_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:bicubic_bezier_patch",
+        "//graphics:webgl_canvas_context",
+        "//text:font_cycle",
+        "//text:skia_font_manager",
+        "//utils:perlin_noise",
+        "@skia//:core",
+        "@skia//:skparagraph_harfbuzz_skunicode",
+        "@skia//:skunicode_icu",
+    ],
+)
+
+cc_library(
     name = "elastic_text_fiddle",
     srcs = ["elastic_text_fiddle.cc"],
     hdrs = ["elastic_text_fiddle.h"],
@@ -11,7 +51,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//text:font_cycle",
         "//text:skia_font_manager",
@@ -31,7 +71,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//images:skia_image_store",
         "//text:skia_font_manager",
@@ -48,7 +88,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//text:skia_font_manager",
         "@skia//:core",
@@ -65,7 +105,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//text:skia_font_manager",
         "//utils:color_utils",
@@ -82,7 +122,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//morphing:shape_morpher",
         "//text:skia_font_manager",
@@ -99,7 +139,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//geometry:catmull_rom_spline",
         "//geometry:shape_builder",
         "//graphics:webgl_canvas_context",
@@ -118,7 +158,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//text:font_cycle",
         "//text:skia_font_manager",
@@ -165,7 +205,7 @@ cc_library(
     deps = [
         ":skia_drawing_builder",
         ":skia_pulse_benchmark",
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "@skia//:core",
     ],
@@ -182,7 +222,7 @@ cc_library(
     deps = [
         ":skia_drawing_builder",
         ":skia_pulse_benchmark",
-        "//:fiddle_base",
+        "//core:fiddle_base",
         "//graphics:raster_canvas_context",
         "@skia//:core",
     ],

@@ -6,11 +6,10 @@ cc_library(
     name = "raster_canvas_context",
     srcs = ["raster_canvas_context.cc"],
     hdrs = ["raster_canvas_context.h"],
-    target_compatible_with = select({
-        "//:wasm_build": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = ["@skia//:core"],
+    deps = [
+        "//core:fiddle_base",
+        "@skia//:core",
+    ],
 )
 
 cc_library(
@@ -22,6 +21,7 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//core:fiddle_base",
         "@skia//:core",
         "@skia//:ganesh_gl",
         "@skia//:ganesh_webgl_factory",

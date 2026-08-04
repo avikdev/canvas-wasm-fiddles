@@ -5,9 +5,9 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 
-#include "fiddle_manager.h"
 #include "images/skia_image_store.h"
 #include "text/skia_font_manager.h"
+#include "wasm_canvas.h"
 
 namespace {
 
@@ -31,9 +31,9 @@ bool LoadImage(const std::string &image_id,
 EMSCRIPTEN_BINDINGS(CanvasWasmDemo) {
   emscripten::function("loadFont", &LoadFont);
   emscripten::function("loadImage", &LoadImage);
-  emscripten::class_<FiddleManager>("FiddleManager")
+  emscripten::class_<WasmFiddleManager>("FiddleManager")
       .constructor<emscripten::val, const std::string &>()
-      .function("selectFiddle", &FiddleManager::SelectFiddle)
-      .function("resize", &FiddleManager::Resize)
-      .function("tick", &FiddleManager::Tick);
+      .function("selectFiddle", &WasmFiddleManager::SelectFiddle)
+      .function("resize", &WasmFiddleManager::Resize)
+      .function("tick", &WasmFiddleManager::Tick);
 }

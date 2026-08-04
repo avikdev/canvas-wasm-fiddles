@@ -499,8 +499,6 @@ ShapeIntersectionFiddle::ShapeIntersectionFiddle() = default;
 
 ShapeIntersectionFiddle::~ShapeIntersectionFiddle() = default;
 
-bool ShapeIntersectionFiddle::UsesWebGl() const { return true; }
-
 bool ShapeIntersectionFiddle::EnsureWebGl() {
   if (webgl_ != nullptr) {
     return true;
@@ -522,7 +520,7 @@ bool ShapeIntersectionFiddle::EnsureWebGl() {
   }
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
   webgl_ = std::move(webgl);
@@ -533,8 +531,8 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   if (!EnsureWebGl()) {
     return;
   }
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;

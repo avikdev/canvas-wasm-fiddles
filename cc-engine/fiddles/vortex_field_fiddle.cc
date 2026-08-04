@@ -426,8 +426,6 @@ VortexFieldFiddle::VortexFieldFiddle() : field_seed_(std::random_device{}()) {}
 
 VortexFieldFiddle::~VortexFieldFiddle() = default;
 
-bool VortexFieldFiddle::UsesWebGl() const { return true; }
-
 bool VortexFieldFiddle::EnsureResources() {
   if (webgl_ != nullptr) {
     return true;
@@ -438,7 +436,7 @@ bool VortexFieldFiddle::EnsureResources() {
   initialization_attempted_ = true;
 
   auto webgl = std::make_unique<WebGlCanvasContext>();
-  if (!webgl->Initialize(Canvas())) {
+  if (!webgl->Initialize(WebGlResource())) {
     return false;
   }
   dash_path_effect_ = SkDashPathEffect::Make(kVortexDashIntervals, 0.0F);
@@ -665,8 +663,8 @@ void VortexFieldFiddle::Render(double time_seconds) {
     return;
   }
 
-  const int width = Canvas()["width"].as<int>();
-  const int height = Canvas()["height"].as<int>();
+  const int width = PixelWidth();
+  const int height = PixelHeight();
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;

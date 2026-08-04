@@ -1,14 +1,39 @@
 <script lang="ts">
-import type { FiddleId } from "@canvas-wasm-fiddles/canvas-worker";
-import { ArrowUpRight, Braces, Menu, Sparkles } from "lucide-svelte";
+import { ArrowUpRight, Braces, Menu, Pause, Play, Sparkles } from "lucide-svelte";
+import { onMount } from "svelte";
 import CanvasStage from "./lib/CanvasStage.svelte";
 import { Button } from "./lib/components/ui/button";
 import { Separator } from "./lib/components/ui/separator";
-import { fiddles } from "./lib/fiddles";
+import { fiddles, type FiddleId } from "./lib/fiddles";
 
 let selectedId = $state<FiddleId>("ribbon-field");
 let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId) ?? fiddles[0]);
-let navOpen = $state(true);
+let compactNavigation = $state<boolean>(
+  typeof window === "undefined" ? false : window.matchMedia("(max-width: 760px)").matches,
+);
+// svelte-ignore state_referenced_locally
+let navOpen = $state(!compactNavigation);
+let animationPaused = $state(false);
+
+function selectFiddle(id: FiddleId) {
+  selectedId = id;
+  animationPaused = false;
+  if (compactNavigation) {
+    navOpen = false;
+  }
+}
+
+onMount(() => {
+  const mediaQuery = window.matchMedia("(max-width: 760px)");
+  const updateNavigationMode = (event: MediaQueryListEvent | MediaQueryList) => {
+    compactNavigation = event.matches;
+    navOpen = !event.matches;
+  };
+
+  updateNavigationMode(mediaQuery);
+  mediaQuery.addEventListener("change", updateNavigationMode);
+  return () => mediaQuery.removeEventListener("change", updateNavigationMode);
+});
 </script>
 
 <svelte:head>
@@ -56,7 +81,7 @@ let navOpen = $state(true);
               variant="ghost"
               class="fiddle-link"
               aria-current={selectedId === fiddle.id ? "page" : undefined}
-              onclick={() => (selectedId = fiddle.id)}
+              onclick={() => selectFiddle(fiddle.id)}
             >
               <span class="fiddle-icon" style:--fiddle-color={fiddle.color}>
                 {fiddle.initials}
@@ -94,42 +119,51 @@ let navOpen = $state(true);
       </div>
     </aside>
 
+    <button
+      type="button"
+      class="nav-scrim"
+      aria-label="Close fiddle navigation"
+      tabindex={navOpen && compactNavigation ? 0 : -1}
+      onclick={() => (navOpen = false)}
+    ></button>
+
     <main class="main-panel">
       <header class="fiddle-header">
         <h2>{selected.title}</h2>
-        <div class="render-chip">
-          <span></span>
-          Worker rendering
+        <div class="header-actions">
+          <button
+            type="button"
+            class="animation-toggle"
+            aria-label={animationPaused ? "Play animation" : "Pause animation"}
+            aria-pressed={animationPaused}
+            title={animationPaused ? "Play animation" : "Pause animation"}
+            onclick={() => (animationPaused = !animationPaused)}
+          >
+            {#if animationPaused}
+              <Play size={17} fill="currentColor" />
+            {:else}
+              <Pause size={17} fill="currentColor" />
+            {/if}
+          </button>
+          <div class="render-chip">
+            <span></span>
+            Worker rendering
+          </div>
         </div>
       </header>
 
       <section class="canvas-wrap" aria-live="polite">
         {#key selected.id}
-          <CanvasStage fiddle={selected.id} />
+          <CanvasStage fiddle={selected.id} paused={animationPaused} />
         {/key}
       </section>
 
       <footer class="fiddle-meta">
         <p>{selected.summary}</p>
-        <div>
-          <span>Renderer</span>
-          <strong>
-            {selected.id === "skia-webgl" ||
-            selected.id === "ribbon-field" ||
-            selected.id === "elastic-text" ||
-            selected.id === "sksl-image-proc" ||
-            selected.id === "shape-tracing" ||
-            selected.id === "shape-morphing" ||
-            selected.id === "vortex-field"
-              ? "Skia Ganesh / WebGL"
-              : selected.id === "skia-cpu"
-                ? "Skia Raster / CPU"
-                : "OffscreenCanvas / 2D"}
-          </strong>
-        </div>
-        <div>
-          <span>Thread</span>
-          <strong>Dedicated worker</strong>
+        <div class="fiddle-tags" aria-label="Fiddle tags">
+          {#each selected.tags as tag}
+            <span>{tag}</span>
+          {/each}
         </div>
       </footer>
     </main>
