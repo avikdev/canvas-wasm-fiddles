@@ -60,10 +60,11 @@ SkPath RectangleWithHole() {
 int main() {
   bool success = true;
 
+  const SkPath source_rectangle = Rectangle(-2.0F, -1.0F, 2.0F, 1.0F);
+  const SkPath target_diamond = RoundedDiamond();
   skmorph::ShapeMorpher morpher;
-  success &= Expect(
-      morpher.Init(Rectangle(-2.0F, -1.0F, 2.0F, 1.0F), RoundedDiamond()),
-      "A closed rectangle should morph to a closed cubic shape.");
+  success &= Expect(morpher.Init(source_rectangle, target_diamond),
+                    "A closed rectangle should morph to a closed cubic shape.");
   success &= Expect(morpher.isInitialized(),
                     "Successful initialization should set state.");
   success &= Expect(morpher.contourCount() == 1U,
@@ -72,6 +73,10 @@ int main() {
                     "Original verb boundaries should be synchronized.");
   success &= Expect(!morpher.GetMorphed(0.5F).isEmpty(),
                     "A prepared midpoint should be non-empty.");
+  success &= Expect(morpher.GetMorphed(0.0F) == source_rectangle,
+                    "The zero endpoint must exactly equal the source path.");
+  success &= Expect(morpher.GetMorphed(1.0F) == target_diamond,
+                    "The final endpoint must exactly equal the target path.");
   const std::vector<skmorph::ContourStartPoints> midpoint_starts =
       morpher.GetStartPoints(0.5F);
   success &=

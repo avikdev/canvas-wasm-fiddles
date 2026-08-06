@@ -8,6 +8,8 @@
 
 FiddleBase::FiddleBase(FiddleBackend backend) : backend_(backend) {}
 
+FiddleBase::~FiddleBase() = default;
+
 FiddleBackend FiddleBase::Backend() const { return backend_; }
 
 bool FiddleBase::PopulateCanvas(std::unique_ptr<FiddleCanvasResource> canvas) {

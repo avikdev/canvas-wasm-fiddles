@@ -1,5 +1,5 @@
 <script lang="ts">
-import { ArrowUpRight, Braces, Menu, Pause, Play, Sparkles } from "lucide-svelte";
+import { ArrowUpRight, Braces, Menu, Pause, Play, Save, Sparkles } from "lucide-svelte";
 import { onMount } from "svelte";
 import CanvasStage from "./lib/CanvasStage.svelte";
 import { Button } from "./lib/components/ui/button";
@@ -14,12 +14,77 @@ let compactNavigation = $state<boolean>(
 // svelte-ignore state_referenced_locally
 let navOpen = $state(!compactNavigation);
 let animationPaused = $state(false);
+let svgWritable = $state(false);
+let svgSaving = $state(false);
+let canvasStage: { exportSvg(): Promise<string> } | undefined = $state();
+
+type SvgFileHandle = {
+  createWritable(): Promise<{
+    write(data: Blob): Promise<void>;
+    close(): Promise<void>;
+  }>;
+};
+
+type SvgFilePicker = (options: {
+  suggestedName: string;
+  types: Array<{
+    description: string;
+    accept: Record<string, string[]>;
+  }>;
+}) => Promise<SvgFileHandle>;
 
 function selectFiddle(id: FiddleId) {
   selectedId = id;
   animationPaused = false;
+  svgWritable = false;
   if (compactNavigation) {
     navOpen = false;
+  }
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function saveSvg() {
+  if (!canvasStage || !animationPaused || !svgWritable || svgSaving) return;
+
+  const filename = `${selected.id}-${Math.floor(Date.now() / 1000)}.svg`;
+  const showSaveFilePicker = (
+    window as Window & { showSaveFilePicker?: SvgFilePicker }
+  ).showSaveFilePicker?.bind(window);
+  svgSaving = true;
+  try {
+    if (showSaveFilePicker) {
+      const handle = await showSaveFilePicker({
+        suggestedName: filename,
+        types: [
+          {
+            description: "SVG image",
+            accept: { "image/svg+xml": [".svg"] },
+          },
+        ],
+      });
+      const svg = await canvasStage.exportSvg();
+      const writable = await handle.createWritable();
+      await writable.write(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+      await writable.close();
+      return;
+    }
+
+    const svg = await canvasStage.exportSvg();
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  } catch (error) {
+    if (!isAbortError(error)) {
+      console.error("Could not save the SVG frame.", error);
+    }
+  } finally {
+    svgSaving = false;
   }
 }
 
@@ -145,16 +210,37 @@ onMount(() => {
               <Pause size={17} fill="currentColor" />
             {/if}
           </button>
-          <div class="render-chip">
+          <button
+            type="button"
+            class="svg-save-button"
+            class:unsupported-svg={!svgWritable}
+            disabled={!svgWritable || !animationPaused || svgSaving}
+            aria-label="Save current frame as SVG"
+            title={svgWritable
+              ? animationPaused
+                ? "Save current frame as SVG"
+                : "Pause the animation to save an SVG"
+              : "This fiddle cannot be saved as SVG"}
+            onclick={saveSvg}
+          >
+            <Save size={15} />
+            <span>{svgSaving ? "Saving…" : "Save SVG"}</span>
+          </button>
+          <div class:paused={animationPaused} class="render-chip">
             <span></span>
-            Worker rendering
+            {animationPaused ? "Paused" : "Worker rendering"}
           </div>
         </div>
       </header>
 
       <section class="canvas-wrap" aria-live="polite">
         {#key selected.id}
-          <CanvasStage fiddle={selected.id} paused={animationPaused} />
+          <CanvasStage
+            bind:this={canvasStage}
+            fiddle={selected.id}
+            paused={animationPaused}
+            onSvgWritableChange={(writable) => (svgWritable = writable)}
+          />
         {/key}
       </section>
 

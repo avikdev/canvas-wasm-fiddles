@@ -3,6 +3,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
+
+class SkCanvas;
 
 enum class FiddleBackend {
   kWebGl,
@@ -47,12 +50,14 @@ public:
 
 class FiddleBase {
 public:
-  virtual ~FiddleBase() = default;
+  virtual ~FiddleBase();
 
   FiddleBackend Backend() const;
   bool PopulateCanvas(std::unique_ptr<FiddleCanvasResource> canvas);
   void Resize(double width, double height, double device_pixel_ratio);
+  std::string ExportSvg();
 
+  virtual bool IsSvgWritable() const = 0;
   virtual void Render(double time_seconds) = 0;
 
 protected:
@@ -63,6 +68,8 @@ protected:
   double Width() const;
   double Height() const;
   FiddleCanvasResource &CanvasResource();
+
+  virtual void DrawFrame(SkCanvas *canvas, int width, int height) = 0;
 
 private:
   void RefreshDimensions();

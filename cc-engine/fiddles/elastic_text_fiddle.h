@@ -20,10 +20,13 @@ public:
   ElasticTextFiddle();
   ~ElasticTextFiddle() override;
 
+  bool IsSvgWritable() const override { return true; }
   void Render(double time_seconds) override;
 
 private:
   bool EnsureResources();
+  bool UpdateState(double time_seconds, int width, int height);
+  void DrawFrame(SkCanvas *canvas, int width, int height) override;
   bool RebuildParagraphs(float font_size, float gradient_width);
 
   std::unique_ptr<WebGlCanvasContext> webgl_;
@@ -36,4 +39,7 @@ private:
   bool initialization_attempted_ = false;
   float paragraph_font_size_ = 0.0F;
   float paragraph_gradient_width_ = 0.0F;
+  float current_width_ratio_ = 0.75F;
+  int current_alignment_index_ = 0;
+  int current_font_index_ = 0;
 };

@@ -22,6 +22,10 @@ export type CanvasWorkerMessage =
   | {
       type: "animation";
       paused: boolean;
+    }
+  | {
+      type: "export-svg";
+      requestId: number;
     };
 
 export type CanvasWorkerStatus =
@@ -35,4 +39,14 @@ export type CanvasWorkerStatus =
   | {
       type: "error";
       message: string;
+    }
+  | {
+      type: "svg-capability";
+      writable: boolean;
+    }
+  | {
+      type: "svg-export";
+      requestId: number;
+      svg?: string;
+      error?: string;
     };

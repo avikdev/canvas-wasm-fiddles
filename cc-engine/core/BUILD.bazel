@@ -8,6 +8,20 @@ cc_library(
     hdrs = ["fiddle_base.h"],
 )
 
+cc_library(
+    name = "fiddle_svg",
+    srcs = ["fiddle_svg.cc"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":fiddle_base",
+        "@skia//:core",
+        "@skia//:svg_writer",
+    ],
+)
+
 cc_test(
     name = "fiddle_base_test",
     srcs = ["fiddle_base_test.cc"],
@@ -32,9 +46,11 @@ cc_library(
     deps = [
         ":fiddle_base",
         ":fiddle_registry",
+        ":fiddle_svg",
         "//fiddles:contour_lines_fiddle",
         "//fiddles:elastic_text_fiddle",
         "//fiddles:envelope_distort_fiddle",
+        "//fiddles:mesh_deform_fiddle",
         "//fiddles:ribbon_field_fiddle",
         "//fiddles:shape_intersection_fiddle",
         "//fiddles:shape_morphing_fiddle",

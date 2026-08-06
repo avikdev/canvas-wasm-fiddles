@@ -50,6 +50,13 @@ function reportLog(message: string) {
   self.postMessage({ type: "log", message });
 }
 
+function reportSvgCapability() {
+  self.postMessage({
+    type: "svg-capability",
+    writable: fiddleManager?.isSvgWritable() ?? false,
+  });
+}
+
 self.addEventListener("error", (event) => reportError(event.error ?? event.message));
 self.addEventListener("unhandledrejection", (event) => reportError(event.reason));
 
@@ -136,13 +143,14 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     fiddleManager = new wasmModule.FiddleManager(message.canvas, selectedFiddle);
     fiddleManager.resize(width, height, dpr);
     self.postMessage({ type: "ready" });
+    reportSvgCapability();
 
     previousFrameTime = undefined;
     didReportFirstFrame = false;
     cancelAnimationFrame(animationFrame);
-    if (!animationPaused) {
-      animationFrame = requestAnimationFrame(render);
-    }
+    // Draw one initialized frame even when the fiddle starts paused. The
+    // render callback will only schedule another frame when animation is on.
+    animationFrame = requestAnimationFrame(render);
     return;
   }
 
@@ -151,6 +159,9 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     height = message.height;
     dpr = message.dpr;
     fiddleManager?.resize(width, height, dpr);
+    if (animationPaused) {
+      fiddleManager?.tick(0);
+    }
     return;
   }
 
@@ -171,5 +182,32 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     selectedFiddle = message.fiddle;
     const didSelect = fiddleManager?.selectFiddle(selectedFiddle);
     reportLog(`Selected ${selectedFiddle}: ${String(didSelect)}`);
+    reportSvgCapability();
+    return;
+  }
+
+  if (message.type === "export-svg") {
+    try {
+      if (!fiddleManager) {
+        throw new Error("The renderer is not ready.");
+      }
+      if (!animationPaused) {
+        throw new Error("Pause the animation before saving an SVG.");
+      }
+      if (!fiddleManager.isSvgWritable()) {
+        throw new Error("This fiddle cannot be represented as SVG.");
+      }
+      const svg = fiddleManager.exportSvg();
+      if (!svg) {
+        throw new Error("Skia could not generate the SVG frame.");
+      }
+      self.postMessage({ type: "svg-export", requestId: message.requestId, svg });
+    } catch (error) {
+      self.postMessage({
+        type: "svg-export",
+        requestId: message.requestId,
+        error: describeError(error),
+      });
+    }
   }
 };

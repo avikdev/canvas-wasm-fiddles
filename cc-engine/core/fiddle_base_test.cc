@@ -42,6 +42,7 @@ private:
 
 class TestWebGlFiddle final : public FiddleBaseWebGL {
 public:
+  bool IsSvgWritable() const override { return true; }
   void Render(double) override {}
 
   int TestPixelWidth() const { return PixelWidth(); }
@@ -49,6 +50,9 @@ public:
   double TestWidth() const { return Width(); }
   double TestHeight() const { return Height(); }
   int TestWebGlVersion() { return WebGlResource().Version(); }
+
+private:
+  void DrawFrame(SkCanvas *, int, int) override {}
 };
 
 } // namespace

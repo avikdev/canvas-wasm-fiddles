@@ -282,28 +282,42 @@ void ElasticTextFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
 
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Elastic text could not submit its WebGL "
+                 "frame."
+              << std::endl;
+  }
+}
+
+bool ElasticTextFiddle::UpdateState(double time_seconds, int width,
+                                    int height) {
   const double cycle_position =
       std::fmod(time_seconds, kPanelWidthCycleSeconds) /
       kPanelWidthCycleSeconds;
   const std::size_t sequence_position =
       static_cast<std::size_t>(time_seconds / kContentCycleSeconds) %
       alignment_sequence_.size();
-  const int alignment_index = alignment_sequence_[sequence_position];
-  const int font_index =
+  current_alignment_index_ = alignment_sequence_[sequence_position];
+  current_font_index_ =
       text::CyclingFontIndex(time_seconds, kContentCycleSeconds);
-  const float width_ratio =
+  current_width_ratio_ =
       0.575F + 0.175F * std::cos(static_cast<float>(cycle_position * 2.0 *
                                                     std::numbers::pi));
 
   const float canvas_width = static_cast<float>(width);
   const float canvas_height = static_cast<float>(height);
   const float shortest = std::min(canvas_width, canvas_height);
-  const float panel_width = canvas_width * width_ratio;
+  const float panel_width = canvas_width * current_width_ratio_;
   const float panel_left = (canvas_width - panel_width) * 0.5F;
   const float panel_top = canvas_height * 0.15F;
   const float panel_bottom = canvas_height * 0.85F;
@@ -311,7 +325,6 @@ void ElasticTextFiddle::Render(double time_seconds) {
                                         panel_left + panel_width, panel_bottom);
 
   const float panel_padding = std::clamp(panel_width * 0.045F, 24.0F, 56.0F);
-  const float label_font_size = std::clamp(shortest * 0.030F, 20.0F, 28.0F);
   const SkRect text_bounds = SkRect::MakeLTRB(
       panel.left() + panel_padding, panel.top() + panel_padding,
       panel.right() - panel_padding, panel.bottom() - panel_padding);
@@ -324,14 +337,35 @@ void ElasticTextFiddle::Render(double time_seconds) {
       std::abs(paragraph_font_size_ - paragraph_font_size) > 0.1F ||
       std::abs(paragraph_gradient_width_ - canvas_width) > 0.1F) {
     if (!RebuildParagraphs(paragraph_font_size, canvas_width)) {
-      return;
+      return false;
     }
   }
   skia::textlayout::Paragraph *paragraph =
-      paragraphs_[font_index][alignment_index].get();
+      paragraphs_[current_font_index_][current_alignment_index_].get();
   paragraph->layout(text_bounds.width());
+  return true;
+}
 
-  SkCanvas *canvas = surface->getCanvas();
+void ElasticTextFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
+  const int alignment_index = current_alignment_index_;
+  const int font_index = current_font_index_;
+  const float canvas_width = static_cast<float>(width);
+  const float canvas_height = static_cast<float>(height);
+  const float shortest = std::min(canvas_width, canvas_height);
+  const float panel_width = canvas_width * current_width_ratio_;
+  const float panel_left = (canvas_width - panel_width) * 0.5F;
+  const float panel_top = canvas_height * 0.15F;
+  const float panel_bottom = canvas_height * 0.85F;
+  const SkRect panel = SkRect::MakeLTRB(panel_left, panel_top,
+                                        panel_left + panel_width, panel_bottom);
+  const float panel_padding = std::clamp(panel_width * 0.045F, 24.0F, 56.0F);
+  const float label_font_size = std::clamp(shortest * 0.030F, 20.0F, 28.0F);
+  const SkRect text_bounds = SkRect::MakeLTRB(
+      panel.left() + panel_padding, panel.top() + panel_padding,
+      panel.right() - panel_padding, panel.bottom() - panel_padding);
+  skia::textlayout::Paragraph *paragraph =
+      paragraphs_[font_index][alignment_index].get();
+
   canvas->clear(SkColorSetRGB(204, 213, 174));
 
   SkPaint paint;
@@ -411,11 +445,4 @@ void ElasticTextFiddle::Render(double time_seconds) {
                          SkTextEncoding::kUTF8,
                          font_label_x + font_prefix_width, legend_baseline,
                          bold_label_font, paint);
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Elastic text could not submit its WebGL "
-                 "frame."
-              << std::endl;
-  }
 }

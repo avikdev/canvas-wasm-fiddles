@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "graphics/webgl_canvas_context.h"
-#include "include/core/SkBlendMode.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
 #include "include/core/SkFont.h"
@@ -533,14 +532,33 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   }
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
 
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Shape intersection could not submit its "
+                 "WebGL frame."
+              << std::endl;
+  }
+}
+
+bool ShapeIntersectionFiddle::UpdateState(double time_seconds, int, int) {
+  time_seconds_ = time_seconds;
+  return true;
+}
+
+void ShapeIntersectionFiddle::DrawFrame(SkCanvas *canvas, int width,
+                                        int height) {
   std::array<BlobShape, kBlobCount> blobs;
   for (int index = 0; index < kBlobCount; ++index) {
-    blobs[index] = BuildBlob(index, time_seconds, static_cast<float>(width),
+    blobs[index] = BuildBlob(index, time_seconds_, static_cast<float>(width),
                              static_cast<float>(height));
   }
   const SkRect canvas_bounds =
@@ -548,7 +566,6 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   const std::vector<Region> regions =
       BuildDisjointRegions(blobs, canvas_bounds);
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
   SkPaint fill;
   fill.setAntiAlias(true);
@@ -559,7 +576,7 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   stroke.setStrokeWidth(2.0F);
   stroke.setStrokeCap(SkPaint::kRound_Cap);
   stroke.setStrokeJoin(SkPaint::kRound_Join);
-  stroke.setBlendMode(SkBlendMode::kClear);
+  stroke.setColor(kCanvasColor);
 
   for (const Region &region : regions) {
     SkColor4f color = ColorForPieceId(region.id);
@@ -573,11 +590,4 @@ void ShapeIntersectionFiddle::Render(double time_seconds) {
   DrawPieceCountChip(canvas, static_cast<int>(regions.size()),
                      static_cast<float>(width), static_cast<float>(height),
                      label_typeface_);
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Shape intersection could not submit its "
-                 "WebGL frame."
-              << std::endl;
-  }
 }

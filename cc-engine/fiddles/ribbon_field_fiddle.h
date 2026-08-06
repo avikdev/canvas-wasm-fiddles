@@ -19,10 +19,13 @@ public:
   RibbonFieldFiddle();
   ~RibbonFieldFiddle() override;
 
+  bool IsSvgWritable() const override { return true; }
   void Render(double time_seconds) override;
 
 private:
   bool EnsureResources();
+  bool UpdateState(double time_seconds, int width, int height);
+  void DrawFrame(SkCanvas *canvas, int width, int height) override;
   bool RebuildLetterPaths(int font_index, float width, float height);
 
   std::unique_ptr<WebGlCanvasContext> webgl_;
@@ -34,4 +37,5 @@ private:
   int cached_font_index_ = -1;
   int cached_width_ = 0;
   int cached_height_ = 0;
+  double time_seconds_ = 0.0;
 };

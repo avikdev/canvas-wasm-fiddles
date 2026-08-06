@@ -105,6 +105,11 @@ struct VortexFrame {
   SkPath path;
 };
 
+struct VortexContourSamples {
+  std::vector<SkPoint> points;
+  bool closed = false;
+};
+
 float RandomUnit(std::mt19937 *random) {
   return std::uniform_real_distribution<float>(0.0F, 1.0F)(*random);
 }
@@ -389,25 +394,19 @@ SkPoint ApplyVortex(const SkPoint &point, const SkPoint &center, float radius,
   };
 }
 
-SkPath DeformedPath(const VortexGridShape &shape,
-                    const std::array<VortexFrame, kVortexCount> &vortex_frames,
-                    const std::array<bool, kVortexCount> &active_vortices) {
+SkPath
+DeformedIntersection(const SkPath &intersection,
+                     const std::array<VortexFrame, kVortexCount> &vortex_frames,
+                     std::size_t active_vortex) {
   SkPathBuilder result;
-  result.setFillType(shape.path.getFillType());
-  for (const VortexContourSamples &contour : shape.contours) {
+  result.setFillType(intersection.getFillType());
+  for (const VortexContourSamples &contour : SampleContours(intersection)) {
     std::vector<SkPoint> displaced;
     displaced.reserve(contour.points.size());
     for (const SkPoint &point : contour.points) {
-      SkPoint displaced_point = point;
-      for (std::size_t vortex_index = 0; vortex_index < kVortexCount;
-           ++vortex_index) {
-        if (!active_vortices[vortex_index]) {
-          continue;
-        }
-        const VortexFrame &vortex = vortex_frames[vortex_index];
-        displaced_point = ApplyVortex(displaced_point, vortex.center,
-                                      vortex.radius, vortex.twist_direction);
-      }
+      const VortexFrame &vortex = vortex_frames[active_vortex];
+      const SkPoint displaced_point = ApplyVortex(
+          point, vortex.center, vortex.radius, vortex.twist_direction);
       displaced.push_back(displaced_point);
     }
     geometry::CatmullRomOptions options;
@@ -491,15 +490,13 @@ bool VortexFieldFiddle::RebuildGrid(float width, float height) {
       };
       const ShapeKind kind = shape_kinds[cell_index++];
       SkPath path = BuildShape(kind, center, radius, &random);
-      std::vector<VortexContourSamples> contours = SampleContours(path);
-      if (path.isEmpty() || contours.empty()) {
+      if (path.isEmpty()) {
         continue;
       }
       const float hue = 360.0F * static_cast<float>(hue_distribution(random)) /
                         static_cast<float>(kHueCount);
       rebuilt.push_back({
           std::move(path),
-          std::move(contours),
           color_utils::FromHsl(hue, kShapeSaturation, kShapeLightness),
       });
     }
@@ -665,20 +662,39 @@ void VortexFieldFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
+
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Vortex field could not submit its WebGL "
+                 "frame."
+              << std::endl;
+  }
+}
+
+bool VortexFieldFiddle::UpdateState(double time_seconds, int width,
+                                    int height) {
+  time_seconds_ = time_seconds;
   if (shapes_.empty() || cached_width_ != width || cached_height_ != height) {
     if (!RebuildGrid(static_cast<float>(width), static_cast<float>(height))) {
-      return;
+      return false;
     }
   }
 
   const float canvas_width = static_cast<float>(width);
   const float canvas_height = static_cast<float>(height);
   UpdateVortices(canvas_width, canvas_height, time_seconds);
+  return true;
+}
 
+void VortexFieldFiddle::DrawFrame(SkCanvas *canvas, int, int) {
   std::array<VortexFrame, kVortexCount> vortex_frames;
   for (std::size_t index = 0; index < kVortexCount; ++index) {
     const VortexMotionState &motion = vortices_[index];
@@ -693,7 +709,6 @@ void VortexFieldFiddle::Render(double time_seconds) {
     };
   }
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
 
   SkPaint shape_paint;
@@ -701,31 +716,41 @@ void VortexFieldFiddle::Render(double time_seconds) {
   shape_paint.setStyle(SkPaint::kFill_Style);
 
   for (const VortexGridShape &shape : shapes_) {
-    const SkPath *path_to_draw = &shape.path;
-    SkPath deformed;
-    std::array<bool, kVortexCount> active_vortices = {};
-    bool has_active_vortex = false;
+    SkPath remaining = shape.path;
+    SkPathBuilder composed;
+    composed.setFillType(shape.path.getFillType());
+    bool split_shape = false;
     for (std::size_t index = 0; index < kVortexCount; ++index) {
       const VortexFrame &vortex = vortex_frames[index];
-      if (!SkRect::Intersects(shape.path.getBounds(),
-                              vortex.path.getBounds())) {
+      if (!SkRect::Intersects(remaining.getBounds(), vortex.path.getBounds())) {
         continue;
       }
       const std::optional<SkPath> intersection =
-          Op(shape.path, vortex.path, kIntersect_SkPathOp);
-      if (intersection.has_value() && !intersection->isEmpty()) {
-        active_vortices[index] = true;
-        has_active_vortex = true;
+          Op(remaining, vortex.path, kIntersect_SkPathOp);
+      const std::optional<SkPath> outside =
+          Op(remaining, vortex.path, kDifference_SkPathOp);
+      if (!intersection.has_value() || intersection->isEmpty() ||
+          !outside.has_value()) {
+        continue;
+      }
+
+      const SkPath deformed =
+          DeformedIntersection(*intersection, vortex_frames, index);
+      composed.addPath(deformed.isEmpty() ? *intersection : deformed);
+      remaining = *outside;
+      split_shape = true;
+      if (remaining.isEmpty()) {
+        break;
       }
     }
-    if (has_active_vortex) {
-      deformed = DeformedPath(shape, vortex_frames, active_vortices);
-      if (!deformed.isEmpty()) {
-        path_to_draw = &deformed;
-      }
+    if (split_shape) {
+      composed.addPath(remaining);
     }
+    const SkPath deformed_shape = composed.detach();
+    const SkPath &path_to_draw =
+        split_shape && !deformed_shape.isEmpty() ? deformed_shape : shape.path;
     shape_paint.setColor4f(shape.color);
-    canvas->drawPath(*path_to_draw, shape_paint);
+    canvas->drawPath(path_to_draw, shape_paint);
   }
 
   SkPaint vortex_paint;
@@ -736,12 +761,5 @@ void VortexFieldFiddle::Render(double time_seconds) {
   vortex_paint.setPathEffect(dash_path_effect_);
   for (const VortexFrame &vortex : vortex_frames) {
     canvas->drawPath(vortex.path, vortex_paint);
-  }
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Vortex field could not submit its WebGL "
-                 "frame."
-              << std::endl;
   }
 }

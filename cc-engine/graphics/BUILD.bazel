@@ -1,6 +1,41 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "canvas_legends",
+    srcs = ["canvas_legends.cc"],
+    hdrs = ["canvas_legends.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "canvas_legends_test",
+    srcs = ["canvas_legends_test.cc"],
+    deps = [
+        ":canvas_legends",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "mesh_deformer",
+    srcs = ["mesh_deformer.cc"],
+    hdrs = ["mesh_deformer.h"],
+    deps = [
+        "//geometry:catmull_rom_spline",
+        "@skia//:core",
+    ],
+)
+
+cc_test(
+    name = "mesh_deformer_test",
+    srcs = ["mesh_deformer_test.cc"],
+    deps = [
+        ":mesh_deformer",
+        "@skia//:core",
+    ],
+)
 
 cc_library(
     name = "raster_canvas_context",

@@ -174,11 +174,29 @@ void SkslImageProcFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
 
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] SkSL image processing could not submit "
+                 "its WebGL frame."
+              << std::endl;
+  }
+}
+
+bool SkslImageProcFiddle::UpdateState(double time_seconds, int, int) {
+  time_seconds_ = time_seconds;
+  return true;
+}
+
+void SkslImageProcFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
   const float canvas_width = static_cast<float>(width);
   const float canvas_height = static_cast<float>(height);
   const float shortest = std::min(canvas_width, canvas_height);
@@ -204,10 +222,9 @@ void SkslImageProcFiddle::Render(double time_seconds) {
       panel_left, content_top + panel_height + gap, panel_width, panel_height);
 
   const std::size_t permutation_index =
-      static_cast<std::size_t>(time_seconds / kPermutationSeconds) %
+      static_cast<std::size_t>(time_seconds_ / kPermutationSeconds) %
       kPermutations.size();
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kBackgroundColor);
 
   SkPaint frame_paint;
@@ -253,11 +270,4 @@ void SkslImageProcFiddle::Render(double time_seconds) {
                processed_rect.bottom() + gap + mapping_font_size * 1.35F);
   DrawLabel(canvas, mapping, (canvas_width - mapping_width) * 0.5F, mapping_y,
             mapping_font, SK_ColorWHITE);
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] SkSL image processing could not submit "
-                 "its WebGL frame."
-              << std::endl;
-  }
 }

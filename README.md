@@ -39,12 +39,13 @@ remote before running it.
 ### Contour Lines
 
 This prototype turns a time-varying scalar field into editable vector
-topography. Marching Squares extracts threshold crossings, shared grid-edge
-identities stitch unordered segments into continuous contours, and
-Catmull–Rom interpolation converts those polylines into cubic Bézier paths.
-Filled isobands demonstrate how the same sampled field can partition a canvas
-into regions suitable for maps, heat fields, scientific plots, and procedural
-artwork.
+topography. Each threshold is stored as an inclusive Skia path containing all
+higher elevations, and the regions are painted from low to high as opaque
+layers. A region's fill and outline now use the exact same path, keeping color
+boundaries synchronized with their black strokes. The region API can also
+derive one exclusive compound band lazily with Path Ops, supporting maps, heat
+fields, scientific plots, and procedural artwork without storing redundant
+geometry.
 
 ### Ribbon field
 
@@ -120,15 +121,25 @@ support path-direction inspection, animated motion paths, evenly distributed
 anchors, contour-aware editing tools, and precise placement along vector
 boundaries.
 
+### Shape Morphing
+
+This prototype exercises the path correspondence needed for editable vector
+shape transitions. It normalizes closed contours into synchronized cubic
+segments, aligns structural features and holes, and interpolates their control
+points while preserving bounded topology. The exact source and target paths
+are retained as endpoint invariants, so an animation or editor operation can
+arrive at the supplied geometry without approximation drift.
+
 ### Vortex Field
 
 Each vortex defines a signed radial angle field. For a sample at distance
 `d < radius`, the engine rotates it around the field center by up to three full
 turns, multiplied by `1 - smoothstep(d / radius)`; the sign selects clockwise
-or counter-clockwise rotation. Skia Path Ops first rejects contours outside
-the field, intersecting fields are composed in sequence, and the displaced
-samples are reconstructed as cubic Bézier contours with Catmull–Rom splines.
-The source fill rule is retained so compound-path holes survive deformation.
+or counter-clockwise rotation. Skia Path Ops splits each source shape into
+untouched outside geometry and intersection pieces for the active circles.
+Only those intersection pieces are densely sampled and reconstructed as cubic
+Bézier contours with Catmull–Rom splines; outside pieces remain unsampled. The
+source fill rule is retained so compound-path holes survive deformation.
 
 Build the standalone Wasm demo separately:
 

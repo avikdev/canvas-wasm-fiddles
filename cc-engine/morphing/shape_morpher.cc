@@ -779,6 +779,8 @@ public:
         RotationForPath(target_path, options_.targetRotationDegrees);
     const SkPath source = RotatedPath(source_path, source_rotation);
     const SkPath target = RotatedPath(target_path, target_rotation);
+    source_endpoint_ = source;
+    target_endpoint_ = target;
     if (options_.sourceStartPoint.has_value()) {
       options_.sourceStartPoint =
           MappedPoint(source_rotation, *options_.sourceStartPoint);
@@ -871,6 +873,12 @@ public:
       t = 0.0F;
     }
     t = std::clamp(t, 0.0F, 1.0F);
+    if (t == 0.0F) {
+      return source_endpoint_;
+    }
+    if (t == 1.0F) {
+      return target_endpoint_;
+    }
 
     const internal::CubicContour outer_cubics =
         InterpolateContour(contours_.front(), t);
@@ -941,6 +949,8 @@ public:
 
   bool initialized_ = false;
   MorphOptions options_;
+  SkPath source_endpoint_;
+  SkPath target_endpoint_;
   std::vector<PreparedContour> contours_;
   size_t segment_count_ = 0;
   std::string error_;

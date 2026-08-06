@@ -38,10 +38,13 @@ public:
   EnvelopeDistortFiddle();
   ~EnvelopeDistortFiddle() override;
 
+  bool IsSvgWritable() const override { return true; }
   void Render(double time_seconds) override;
 
 private:
   bool EnsureResources();
+  bool UpdateState(double time_seconds, int width, int height);
+  void DrawFrame(SkCanvas *canvas, int width, int height) override;
   bool BuildTextShapes();
   bool RebuildGrid(float width, float height);
 
@@ -60,4 +63,5 @@ private:
   bool text_shapes_ready_ = false;
   int cached_width_ = 0;
   int cached_height_ = 0;
+  double time_seconds_ = 0.0;
 };

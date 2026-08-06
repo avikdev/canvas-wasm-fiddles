@@ -19,6 +19,9 @@ double ElapsedMilliseconds(TimingClock::time_point start,
 void SkiaCpuFiddle::Render(double time_seconds) {
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
 
   const auto surface_start = TimingClock::now();
   SkSurface *surface = raster_.AcquireSurface(width, height);
@@ -29,7 +32,7 @@ void SkiaCpuFiddle::Render(double time_seconds) {
   }
 
   const auto scene_start = TimingClock::now();
-  DrawSkiaDrawing(surface->getCanvas(), width, height, time_seconds);
+  DrawFrame(surface->getCanvas(), width, height);
   const double scene_draw_ms =
       ElapsedMilliseconds(scene_start, TimingClock::now());
 
@@ -41,4 +44,13 @@ void SkiaCpuFiddle::Render(double time_seconds) {
   benchmark_.Record({.surface_ms = surface_ms,
                      .scene_draw_ms = scene_draw_ms,
                      .present_ms = present_ms});
+}
+
+bool SkiaCpuFiddle::UpdateState(double time_seconds, int, int) {
+  time_seconds_ = time_seconds;
+  return true;
+}
+
+void SkiaCpuFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
+  DrawSkiaDrawing(canvas, width, height, time_seconds_);
 }

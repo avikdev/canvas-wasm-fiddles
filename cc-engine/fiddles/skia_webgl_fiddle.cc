@@ -46,6 +46,9 @@ void SkiaWebGlFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
 
   const auto surface_start = TimingClock::now();
   SkSurface *surface = webgl_->AcquireSurface(width, height);
@@ -56,7 +59,7 @@ void SkiaWebGlFiddle::Render(double time_seconds) {
   }
 
   const auto scene_start = TimingClock::now();
-  DrawSkiaDrawing(surface->getCanvas(), width, height, time_seconds);
+  DrawFrame(surface->getCanvas(), width, height);
   const double scene_draw_ms =
       ElapsedMilliseconds(scene_start, TimingClock::now());
 
@@ -75,4 +78,13 @@ void SkiaWebGlFiddle::Render(double time_seconds) {
                      .present_ms = present_ms,
                      .flush_ms = present.flush_ms,
                      .submit_ms = present.submit_ms});
+}
+
+bool SkiaWebGlFiddle::UpdateState(double time_seconds, int, int) {
+  time_seconds_ = time_seconds;
+  return true;
+}
+
+void SkiaWebGlFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
+  DrawSkiaDrawing(canvas, width, height, time_seconds_);
 }

@@ -320,28 +320,46 @@ void ShapeMorphingFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
+
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Shape morphing could not submit its "
+                 "WebGL frame."
+              << std::endl;
+  }
+}
+
+bool ShapeMorphingFiddle::UpdateState(double time_seconds, int width,
+                                      int height) {
+  time_seconds_ = time_seconds;
   if (!morpher_.isInitialized() || cached_width_ != width ||
       cached_height_ != height) {
     if (!RebuildGlyphs(static_cast<float>(width), static_cast<float>(height))) {
-      return;
+      return false;
     }
   }
+  return true;
+}
 
+void ShapeMorphingFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
   const float canvas_width = static_cast<float>(width);
   const float canvas_height = static_cast<float>(height);
   const float shortest = std::min(canvas_width, canvas_height);
   const ColumnLayout layout = MakeLayout(canvas_width, canvas_height);
 
-  SkCanvas *canvas = surface->getCanvas();
   {
     // SkPath and diagnostics are ref-counted/value-owned frame temporaries.
     // Keeping them in this inner scope releases their CPU allocations before
     // presentation instead of retaining one interpolated shape between ticks.
-    const float t = HeldTriangleWave(time_seconds);
+    const float t = HeldTriangleWave(time_seconds_);
     const SkPath intermediate = morpher_.GetMorphed(t);
     const std::vector<skmorph::ContourStartPoints> intermediate_diagnostics =
         morpher_.GetStartPoints(t);
@@ -382,12 +400,5 @@ void ShapeMorphingFiddle::Render(double time_seconds) {
                      bottom_top + layout.bottom_space * 0.58F, detail_size,
                      kInkColor);
     DrawDiagnosticsLegend(canvas, typeface_, layout, canvas_height, shortest);
-  }
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Shape morphing could not submit its "
-                 "WebGL frame."
-              << std::endl;
   }
 }

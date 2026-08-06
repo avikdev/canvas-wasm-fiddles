@@ -1,5 +1,7 @@
 export interface FiddleManager {
   selectFiddle(key: string): boolean;
+  isSvgWritable(): boolean;
+  exportSvg(): string;
   resize(width: number, height: number, devicePixelRatio: number): void;
   tick(deltaSeconds: number): void;
   delete(): void;

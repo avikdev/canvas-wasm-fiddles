@@ -916,23 +916,42 @@ void EnvelopeDistortFiddle::Render(double time_seconds) {
   }
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
+
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Envelope Distort could not submit its "
+                 "WebGL frame."
+              << std::endl;
+  }
+}
+
+bool EnvelopeDistortFiddle::UpdateState(double time_seconds, int width,
+                                        int height) {
+  time_seconds_ = time_seconds;
   const int desired_column_count = Width() <= kCompactCanvasWidth
                                        ? kCompactColumnCount
                                        : kDesktopColumnCount;
   if (cells_.empty() || cached_width_ != width || cached_height_ != height) {
     if (!RebuildGrid(static_cast<float>(width), static_cast<float>(height))) {
-      return;
+      return false;
     }
   } else if (column_count_ != desired_column_count) {
     if (!RebuildGrid(static_cast<float>(width), static_cast<float>(height))) {
-      return;
+      return false;
     }
   }
+  return true;
+}
 
+void EnvelopeDistortFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
   const int columns = column_count_;
   const int rows = row_count_;
   const float grid_width = columns * cell_width_;
@@ -941,7 +960,8 @@ void EnvelopeDistortFiddle::Render(double time_seconds) {
   const float grid_top = (static_cast<float>(height) - grid_height) * 0.5F;
   const float cell_short_edge = std::min(cell_width_, cell_height_);
   const float padding = cell_short_edge * kCellPaddingRatio;
-  const float animated_time = static_cast<float>(time_seconds) * kAnimationRate;
+  const float animated_time =
+      static_cast<float>(time_seconds_) * kAnimationRate;
   const int word_frame =
       static_cast<int>(std::floor(animated_time / kWordCycleSeconds));
   const int font_index =
@@ -961,7 +981,6 @@ void EnvelopeDistortFiddle::Render(double time_seconds) {
   SkFont legend_font(label_typeface_, legend_font_size);
   legend_font.setEdging(SkFont::Edging::kAntiAlias);
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
   SkPaint paint;
   paint.setAntiAlias(true);
@@ -1077,12 +1096,5 @@ void EnvelopeDistortFiddle::Render(double time_seconds) {
       DrawLegendChip(canvas, cell_rect, EnvelopeLabel(envelope_kind),
                      legend_font, legend_chip_height, legend_bottom_margin);
     }
-  }
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Envelope Distort could not submit its "
-                 "WebGL frame."
-              << std::endl;
   }
 }

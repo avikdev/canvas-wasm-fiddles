@@ -223,6 +223,12 @@ bool WasmFiddleManager::SelectFiddle(const std::string &key) {
   return manager_->SelectFiddle(key);
 }
 
+bool WasmFiddleManager::IsSvgWritable() const {
+  return manager_->IsSvgWritable();
+}
+
+std::string WasmFiddleManager::ExportSvg() { return manager_->ExportSvg(); }
+
 void WasmFiddleManager::Resize(double width, double height,
                                double device_pixel_ratio) {
   manager_->Resize(width, height, device_pixel_ratio);

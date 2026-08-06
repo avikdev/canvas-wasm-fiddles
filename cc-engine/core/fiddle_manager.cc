@@ -7,6 +7,7 @@
 #include "fiddles/contour_lines_fiddle.h"
 #include "fiddles/elastic_text_fiddle.h"
 #include "fiddles/envelope_distort_fiddle.h"
+#include "fiddles/mesh_deform_fiddle.h"
 #include "fiddles/ribbon_field_fiddle.h"
 #include "fiddles/shape_intersection_fiddle.h"
 #include "fiddles/shape_morphing_fiddle.h"
@@ -42,6 +43,10 @@ std::unique_ptr<FiddleBase> CreateEnvelopeDistort() {
   return std::make_unique<EnvelopeDistortFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateMeshDeform() {
+  return std::make_unique<MeshDeformFiddle>();
+}
+
 std::unique_ptr<FiddleBase> CreateSkslImageProc() {
   return std::make_unique<SkslImageProcFiddle>();
 }
@@ -75,6 +80,7 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
   registry_.Register("skia-cpu", &CreateSkiaCpu);
   registry_.Register("elastic-text", &CreateElasticText);
   registry_.Register("env-distort", &CreateEnvelopeDistort);
+  registry_.Register("mesh-deform-vec", &CreateMeshDeform);
   registry_.Register("sksl-image-proc", &CreateSkslImageProc);
   registry_.Register("shape-intersection", &CreateShapeIntersection);
   registry_.Register("shape-tracing", &CreateShapeTracing);
@@ -84,7 +90,7 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
   std::cout
       << "[cc-engine/stdout] FiddleManager initialized with "
       << "contour-lines, ribbon-field, skia-webgl, skia-cpu, elastic-text, "
-         "env-distort, sksl-image-proc, shape-intersection, "
+         "env-distort, mesh-deform-vec, sksl-image-proc, shape-intersection, "
          "shape-tracing, shape-morphing, and vortex-field."
       << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
@@ -117,6 +123,17 @@ bool FiddleManager::SelectFiddle(const std::string &key) {
   std::cout << "[cc-engine/stdout] Activated fiddle: " << active_key_
             << std::endl;
   return true;
+}
+
+bool FiddleManager::IsSvgWritable() const {
+  return active_fiddle_ != nullptr && active_fiddle_->IsSvgWritable();
+}
+
+std::string FiddleManager::ExportSvg() {
+  if (!IsSvgWritable()) {
+    return {};
+  }
+  return active_fiddle_->ExportSvg();
 }
 
 void FiddleManager::Resize(double width, double height,

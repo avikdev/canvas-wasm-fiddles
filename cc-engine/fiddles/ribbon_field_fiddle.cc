@@ -456,30 +456,48 @@ void RibbonFieldFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
-  const int ribbon_count =
-      Width() <= kPhoneWidthThreshold ? kPhoneRibbonCount : kDesktopRibbonCount;
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
 
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Ribbon field could not submit its WebGL "
+                 "frame."
+              << std::endl;
+  }
+}
+
+bool RibbonFieldFiddle::UpdateState(double time_seconds, int width,
+                                    int height) {
+  time_seconds_ = time_seconds;
   const int font_index =
       text::CyclingFontIndex(time_seconds, kFontCycleSeconds);
   if (cached_font_index_ != font_index || cached_width_ != width ||
       cached_height_ != height) {
     if (!RebuildLetterPaths(font_index, static_cast<float>(width),
                             static_cast<float>(height))) {
-      return;
+      return false;
     }
   }
+  return true;
+}
 
+void RibbonFieldFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
+  const int ribbon_count =
+      Width() <= kPhoneWidthThreshold ? kPhoneRibbonCount : kDesktopRibbonCount;
   const SkPath all_letter_strokes = UnionFilledPaths(letter_stroke_paths_);
 
   std::array<SkPath, kDesktopRibbonCount> ribbons;
   for (int ribbon = 0; ribbon < ribbon_count; ++ribbon) {
-    const SkPath original =
-        BuildRibbonPath(ribbon, static_cast<float>(width),
-                        static_cast<float>(height), time_seconds, ribbon_count);
+    const SkPath original = BuildRibbonPath(ribbon, static_cast<float>(width),
+                                            static_cast<float>(height),
+                                            time_seconds_, ribbon_count);
     const std::optional<SkPath> without_letter_strokes =
         Op(original, all_letter_strokes, kDifference_SkPathOp);
     ribbons[ribbon] = without_letter_strokes.has_value()
@@ -489,7 +507,6 @@ void RibbonFieldFiddle::Render(double time_seconds) {
 
   const SkPath all_letters = UnionFilledPaths(letter_paths_);
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
   std::vector<ColoredPiece> pieces;
   pieces.reserve(ribbon_count * (kLetterCount + 1));
@@ -563,12 +580,5 @@ void RibbonFieldFiddle::Render(double time_seconds) {
   for (const ColoredPiece &piece : pieces) {
     paint.setColor4f(piece.color);
     canvas->drawPath(piece.path, paint);
-  }
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Ribbon field could not submit its WebGL "
-                 "frame."
-              << std::endl;
   }
 }

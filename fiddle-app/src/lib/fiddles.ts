@@ -22,11 +22,11 @@ export const fiddles = [
     id: "contour-lines",
     title: "Contour Lines",
     summary:
-      "Marching Squares stitches animated 3D Perlin slices into smooth cubic contour boundaries and filled scalar bands.",
-    technique: "Marching Squares · Catmull–Rom · WebGL",
+      "Nested inclusive Skia paths layer animated Perlin elevation regions with strokes taken from the same geometry.",
+    technique: "Inclusive regions · Path Ops · WebGL",
     color: "#ffb347",
     initials: "CL",
-    tags: ["WebGL", "Skia Ganesh", "Advanced"],
+    tags: ["WebGL", "Skia Ganesh", "Path Ops", "Advanced"],
   },
   {
     id: "ribbon-field",
@@ -74,6 +74,16 @@ export const fiddles = [
     technique: "Bicubic Bézier FFD · text outlines · WebGL",
     color: "#78d8c0",
     initials: "ED",
+    tags: ["WebGL", "Skia Ganesh", "Advanced"],
+  },
+  {
+    id: "mesh-deform-vec",
+    title: "Mesh Deform",
+    summary:
+      "Short multidirectional pushes reshape a dense topology-safe vector lattice without disturbing the opposite side.",
+    technique: "Control lattice · Path Ops · WebGL",
+    color: "#58d6c7",
+    initials: "MD",
     tags: ["WebGL", "Skia Ganesh", "Advanced"],
   },
   {

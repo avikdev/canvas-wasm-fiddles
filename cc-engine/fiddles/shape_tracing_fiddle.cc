@@ -451,20 +451,39 @@ void ShapeTracingFiddle::Render(double time_seconds) {
 
   const int width = PixelWidth();
   const int height = PixelHeight();
+  if (!UpdateState(time_seconds, width, height)) {
+    return;
+  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
+  DrawFrame(surface->getCanvas(), width, height);
+
+  const WebGlPresentResult present = webgl_->FlushAndPresent();
+  if (!present.success) {
+    std::cerr << "[cc-engine/stderr] Shape tracing could not submit its WebGL "
+                 "frame."
+              << std::endl;
+  }
+}
+
+bool ShapeTracingFiddle::UpdateState(double time_seconds, int width,
+                                     int height) {
+  time_seconds_ = time_seconds;
   if (letter_path_.isEmpty() || cached_width_ != width ||
       cached_height_ != height) {
     if (!RebuildLetterPath(static_cast<float>(width),
                            static_cast<float>(height))) {
-      return;
+      return false;
     }
   }
+  return true;
+}
 
+void ShapeTracingFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
   const float progress = static_cast<float>(
-      std::fmod(time_seconds, kTraceCycleSeconds) / kTraceCycleSeconds);
+      std::fmod(time_seconds_, kTraceCycleSeconds) / kTraceCycleSeconds);
   const float distance = progress * total_length_;
   const TracePosition trace =
       PositionAtCombinedDistance(atomic_segments_, distance);
@@ -472,7 +491,6 @@ void ShapeTracingFiddle::Render(double time_seconds) {
   const float canvas_height = static_cast<float>(height);
   const float shortest = std::min(canvas_width, canvas_height);
 
-  SkCanvas *canvas = surface->getCanvas();
   canvas->clear(kCanvasColor);
 
   SkPaint paint;
@@ -495,11 +513,4 @@ void ShapeTracingFiddle::Render(double time_seconds) {
   DrawLegends(canvas, typeface_, total_length_, progress * 100.0F,
               atomic_segments_, trace.segment_index, canvas_width,
               canvas_height);
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
-    std::cerr << "[cc-engine/stderr] Shape tracing could not submit its WebGL "
-                 "frame."
-              << std::endl;
-  }
 }

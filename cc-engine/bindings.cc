@@ -34,6 +34,8 @@ EMSCRIPTEN_BINDINGS(CanvasWasmDemo) {
   emscripten::class_<WasmFiddleManager>("FiddleManager")
       .constructor<emscripten::val, const std::string &>()
       .function("selectFiddle", &WasmFiddleManager::SelectFiddle)
+      .function("isSvgWritable", &WasmFiddleManager::IsSvgWritable)
+      .function("exportSvg", &WasmFiddleManager::ExportSvg)
       .function("resize", &WasmFiddleManager::Resize)
       .function("tick", &WasmFiddleManager::Tick);
 }

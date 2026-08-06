@@ -3,6 +3,22 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "fake_mouse_actions",
+    srcs = ["fake_mouse_actions.cc"],
+    hdrs = ["fake_mouse_actions.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "fake_mouse_actions_test",
+    srcs = ["fake_mouse_actions_test.cc"],
+    deps = [
+        ":fake_mouse_actions",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
     name = "color_utils",
     srcs = ["color_utils.cc"],
     hdrs = ["color_utils.h"],

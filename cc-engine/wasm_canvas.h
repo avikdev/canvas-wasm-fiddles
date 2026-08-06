@@ -19,6 +19,8 @@ public:
   WasmFiddleManager &operator=(const WasmFiddleManager &) = delete;
 
   bool SelectFiddle(const std::string &key);
+  bool IsSvgWritable() const;
+  std::string ExportSvg();
   void Resize(double width, double height, double device_pixel_ratio);
   void Tick(double delta_seconds);
 

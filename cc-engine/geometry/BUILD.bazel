@@ -35,6 +35,27 @@ cc_test(
 )
 
 cc_library(
+    name = "contour_regions",
+    srcs = ["contour_regions.cc"],
+    hdrs = ["contour_regions.h"],
+    deps = [
+        ":catmull_rom_spline",
+        ":marching_squares",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_test(
+    name = "contour_regions_test",
+    srcs = ["contour_regions_test.cc"],
+    deps = [
+        ":contour_regions",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
     name = "marching_squares",
     srcs = ["marching_squares.cc"],
     hdrs = ["marching_squares.h"],

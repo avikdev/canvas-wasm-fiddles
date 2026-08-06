@@ -3,6 +3,28 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "mesh_deform_fiddle",
+    srcs = ["mesh_deform_fiddle.cc"],
+    hdrs = ["mesh_deform_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:shape_builder",
+        "//graphics:canvas_legends",
+        "//graphics:mesh_deformer",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "//utils:color_utils",
+        "//utils:fake_mouse_actions",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_library(
     name = "contour_lines_fiddle",
     srcs = ["contour_lines_fiddle.cc"],
     hdrs = ["contour_lines_fiddle.h"],
@@ -12,8 +34,7 @@ cc_library(
     }),
     deps = [
         "//core:fiddle_base",
-        "//geometry:catmull_rom_spline",
-        "//geometry:marching_squares",
+        "//geometry:contour_regions",
         "//graphics:webgl_canvas_context",
         "//utils:color_utils",
         "//utils:perlin_noise",
