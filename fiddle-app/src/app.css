@@ -98,12 +98,6 @@ a {
   border-bottom: 1px solid rgb(246 243 234 / 12%);
 }
 
-.app-bar .brand {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
 .nav-toggle {
   display: grid;
   width: 40px;
@@ -169,6 +163,12 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.app-bar .brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .brand-mark {
@@ -394,6 +394,17 @@ a {
   fill: currentColor;
 }
 
+.sidebar-footer .skia-resource-link {
+  padding: 7px;
+}
+
+.skia-resource-link img {
+  display: block;
+  width: 29px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .sidebar-footer a:hover {
   color: #f6f3ea;
   background: rgb(246 243 234 / 8%);
@@ -411,11 +422,6 @@ a {
   font-weight: 850;
   background: #654ff0;
   border-radius: 4px;
-}
-
-.sidebar-footer .text-resource-link {
-  grid-column: 1 / -1;
-  min-height: 28px;
 }
 
 .main-panel {
@@ -485,7 +491,10 @@ a {
 
 .render-chip {
   display: flex;
+  width: 116px;
+  flex: 0 0 116px;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 7px 10px;
   color: #f6ad0a;
@@ -605,7 +614,7 @@ a {
 .fiddle-meta > p {
   max-width: 490px;
   color: #4e544f;
-  font-size: clamp(15px, 1.4vw, 18px);
+  font-size: clamp(12px, 1.1vw, 14px);
   line-height: 1.45;
 }
 
@@ -773,6 +782,8 @@ a {
   }
 
   .render-chip {
+    width: 104px;
+    flex-basis: 104px;
     padding: 6px 8px;
     font-size: 7px;
   }

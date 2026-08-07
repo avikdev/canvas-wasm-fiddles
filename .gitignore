@@ -10,6 +10,7 @@ node_modules/
 dist/
 .svelte-kit/
 coverage/
+.vercel/
 
 # Bazel
 bazel-*
@@ -17,3 +18,5 @@ bazel-*
 # Editors
 .idea/
 .vscode/
+.vercel
+.env*

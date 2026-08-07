@@ -5,17 +5,18 @@
 #include <memory>
 
 #include "fiddles/contour_lines_fiddle.h"
-#include "fiddles/elastic_text_fiddle.h"
 #include "fiddles/envelope_distort_fiddle.h"
-#include "fiddles/mesh_deform_fiddle.h"
-#include "fiddles/ribbon_field_fiddle.h"
+#include "fiddles/mesh_warp_fiddle.h"
+#include "fiddles/pucker_bloat_fiddle.h"
+#include "fiddles/scene_benchmark_cpu_fiddle.h"
+#include "fiddles/scene_benchmark_webgl_fiddle.h"
 #include "fiddles/shape_intersection_fiddle.h"
-#include "fiddles/shape_morphing_fiddle.h"
-#include "fiddles/shape_tracing_fiddle.h"
-#include "fiddles/skia_cpu_fiddle.h"
-#include "fiddles/skia_webgl_fiddle.h"
-#include "fiddles/sksl_image_proc_fiddle.h"
-#include "fiddles/vortex_field_fiddle.h"
+#include "fiddles/sksl_shader_fiddle.h"
+#include "fiddles/swirl_deform_fiddle.h"
+#include "fiddles/text_cutting_fiddle.h"
+#include "fiddles/text_morphing_fiddle.h"
+#include "fiddles/text_reflow_fiddle.h"
+#include "fiddles/text_tracing_fiddle.h"
 
 namespace {
 
@@ -23,48 +24,52 @@ std::unique_ptr<FiddleBase> CreateContourLines() {
   return std::make_unique<ContourLinesFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateRibbonField() {
-  return std::make_unique<RibbonFieldFiddle>();
+std::unique_ptr<FiddleBase> CreateTextCutting() {
+  return std::make_unique<TextCuttingFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateSkiaWebGl() {
-  return std::make_unique<SkiaWebGlFiddle>();
+std::unique_ptr<FiddleBase> CreateSceneBenchmarkWebGl() {
+  return std::make_unique<SceneBenchmarkWebGlFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateSkiaCpu() {
-  return std::make_unique<SkiaCpuFiddle>();
+std::unique_ptr<FiddleBase> CreateSceneBenchmarkCpu() {
+  return std::make_unique<SceneBenchmarkCpuFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateElasticText() {
-  return std::make_unique<ElasticTextFiddle>();
+std::unique_ptr<FiddleBase> CreateTextReflow() {
+  return std::make_unique<TextReflowFiddle>();
 }
 
 std::unique_ptr<FiddleBase> CreateEnvelopeDistort() {
   return std::make_unique<EnvelopeDistortFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateMeshDeform() {
-  return std::make_unique<MeshDeformFiddle>();
+std::unique_ptr<FiddleBase> CreateMeshWarp() {
+  return std::make_unique<MeshWarpFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateSkslImageProc() {
-  return std::make_unique<SkslImageProcFiddle>();
+std::unique_ptr<FiddleBase> CreatePuckerBloat() {
+  return std::make_unique<PuckerBloatFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateSkslShader() {
+  return std::make_unique<SkslShaderFiddle>();
 }
 
 std::unique_ptr<FiddleBase> CreateShapeIntersection() {
   return std::make_unique<ShapeIntersectionFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateShapeTracing() {
-  return std::make_unique<ShapeTracingFiddle>();
+std::unique_ptr<FiddleBase> CreateTextTracing() {
+  return std::make_unique<TextTracingFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateShapeMorphing() {
-  return std::make_unique<ShapeMorphingFiddle>();
+std::unique_ptr<FiddleBase> CreateTextMorphing() {
+  return std::make_unique<TextMorphingFiddle>();
 }
 
-std::unique_ptr<FiddleBase> CreateVortexField() {
-  return std::make_unique<VortexFieldFiddle>();
+std::unique_ptr<FiddleBase> CreateSwirlDeform() {
+  return std::make_unique<SwirlDeformFiddle>();
 }
 
 } // namespace
@@ -74,30 +79,32 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
                              const std::string &initial_key)
     : canvas_resources_(canvas_resources), width_(std::max(1.0, initial_width)),
       height_(std::max(1.0, initial_height)) {
-  registry_.Register("contour-lines", &CreateContourLines);
-  registry_.Register("ribbon-field", &CreateRibbonField);
-  registry_.Register("skia-webgl", &CreateSkiaWebGl);
-  registry_.Register("skia-cpu", &CreateSkiaCpu);
-  registry_.Register("elastic-text", &CreateElasticText);
+  registry_.Register("text-reflow", &CreateTextReflow);
+  registry_.Register("text-cutting", &CreateTextCutting);
+  registry_.Register("text-tracing", &CreateTextTracing);
+  registry_.Register("text-morphing", &CreateTextMorphing);
   registry_.Register("env-distort", &CreateEnvelopeDistort);
-  registry_.Register("mesh-deform-vec", &CreateMeshDeform);
-  registry_.Register("sksl-image-proc", &CreateSkslImageProc);
+  registry_.Register("mesh-warp", &CreateMeshWarp);
+  registry_.Register("swirl-deform", &CreateSwirlDeform);
+  registry_.Register("pucker-bloat", &CreatePuckerBloat);
   registry_.Register("shape-intersection", &CreateShapeIntersection);
-  registry_.Register("shape-tracing", &CreateShapeTracing);
-  registry_.Register("shape-morphing", &CreateShapeMorphing);
-  registry_.Register("vortex-field", &CreateVortexField);
+  registry_.Register("contour-lines", &CreateContourLines);
+  registry_.Register("sksl-shader", &CreateSkslShader);
+  registry_.Register("scene-benchmark-webgl", &CreateSceneBenchmarkWebGl);
+  registry_.Register("scene-benchmark-cpu", &CreateSceneBenchmarkCpu);
 
   std::cout
       << "[cc-engine/stdout] FiddleManager initialized with "
-      << "contour-lines, ribbon-field, skia-webgl, skia-cpu, elastic-text, "
-         "env-distort, mesh-deform-vec, sksl-image-proc, shape-intersection, "
-         "shape-tracing, shape-morphing, and vortex-field."
+      << "text-reflow, text-cutting, text-tracing, text-morphing, env-distort, "
+         "mesh-warp, swirl-deform, pucker-bloat, shape-intersection, "
+         "contour-lines, sksl-shader, scene-benchmark-webgl, and "
+         "scene-benchmark-cpu."
       << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
 
   if (!SelectFiddle(initial_key)) {
-    SelectFiddle("ribbon-field");
+    SelectFiddle("text-reflow");
   }
 }
 

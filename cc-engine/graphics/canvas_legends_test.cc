@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cmath>
 
+#include "include/core/SkFont.h"
+
 namespace {
 
 bool Near(float first, float second) {
@@ -25,5 +27,12 @@ int main() {
       graphics::canvas_legends::RemainingFillRect(track, -2.0F);
   assert(Near(empty.left(), 110.0F));
   assert(Near(empty.right(), 110.0F));
+
+  const SkFont font(nullptr, 12.0F);
+  const auto chip = graphics::canvas_legends::MeasureTextChip(
+      "custom", 6U, 50.0F, 20.0F, font);
+  assert(!chip.isEmpty());
+  assert(Near(chip.centerX(), 50.0F));
+  assert(Near(chip.centerY(), 20.0F));
   return 0;
 }

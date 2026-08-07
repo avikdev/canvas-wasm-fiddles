@@ -18,11 +18,11 @@ The loader exports an async `CreateCanvasDemoModule` factory. The initialized
 module exposes `FiddleManager`, which owns the OffscreenCanvas, fiddle
 registry, active fiddle, and animation time.
 
-See [SKIA_WEBGL_WIRING.md](SKIA_WEBGL_WIRING.md) for the native Skia
+See [SCENE_BENCHMARK_WEBGL_WIRING.md](SCENE_BENCHMARK_WEBGL_WIRING.md) for the native Skia
 Ganesh/WebGL context, the GPU-backed on-screen `SkSurface`, and the exact
 zero-CPU-copy boundary.
 
-See [SKIA_PULSE_BENCHMARK.md](SKIA_PULSE_BENCHMARK.md) for the matched
+See [SCENE_BENCHMARK.md](SCENE_BENCHMARK.md) for the matched
 WebGL/CPU benchmark, timing semantics, and the source-level inspection of the
 Ganesh flush and submit path.
 

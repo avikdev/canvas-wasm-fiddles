@@ -19,9 +19,25 @@ cc_test(
 )
 
 cc_library(
-    name = "mesh_deformer",
-    srcs = ["mesh_deformer.cc"],
-    hdrs = ["mesh_deformer.h"],
+    name = "canvas_widgets",
+    srcs = ["canvas_widgets.cc"],
+    hdrs = ["canvas_widgets.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "canvas_widgets_test",
+    srcs = ["canvas_widgets_test.cc"],
+    deps = [
+        ":canvas_widgets",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "mesh_warper",
+    srcs = ["mesh_warper.cc"],
+    hdrs = ["mesh_warper.h"],
     deps = [
         "//geometry:catmull_rom_spline",
         "@skia//:core",
@@ -29,10 +45,10 @@ cc_library(
 )
 
 cc_test(
-    name = "mesh_deformer_test",
-    srcs = ["mesh_deformer_test.cc"],
+    name = "mesh_warper_test",
+    srcs = ["mesh_warper_test.cc"],
     deps = [
-        ":mesh_deformer",
+        ":mesh_warper",
         "@skia//:core",
     ],
 )

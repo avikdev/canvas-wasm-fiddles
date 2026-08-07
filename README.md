@@ -14,7 +14,25 @@ bun install
 bun run dev
 ```
 
-## GitHub Pages
+## Deploy
+
+### Vercel
+
+Vercel deployments are built locally and uploaded as prebuilt output; the
+repository does not need to be connected to Vercel.
+
+```sh
+bunx vercel pull --yes --environment=production
+bunx vercel build --prod
+bunx vercel deploy --prebuilt --prod
+```
+
+The Vercel build uses `/` as the application base, which is appropriate for a
+Vercel URL or a custom domain such as `fiddles.example.com`. See the
+[Vercel deployment guide](docs/vercel-deploy.md) for initial project setup,
+secrets, DNS, and subsequent deployments.
+
+### GitHub Pages
 
 The production build uses `/canvas-wasm-fiddles/` as its Vite base path, so it
 can coexist with other GitHub Pages projects at:
@@ -34,123 +52,24 @@ deploy command builds the full workspace, adds `.nojekyll`, and publishes
 `fiddle-app/dist` to that branch. Git must be authenticated for the `origin`
 remote before running it.
 
-## About the fiddles
-
-### Contour Lines
-
-This prototype turns a time-varying scalar field into editable vector
-topography. Each threshold is stored as an inclusive Skia path containing all
-higher elevations, and the regions are painted from low to high as opaque
-layers. A region's fill and outline now use the exact same path, keeping color
-boundaries synchronized with their black strokes. The region API can also
-derive one exclusive compound band lazily with Path Ops, supporting maps, heat
-fields, scientific plots, and procedural artwork without storing redundant
-geometry.
-
-### Ribbon field
-
-This prototype validates the vector-text pipeline needed by a design editor:
-shaping text with Skia Paragraph, extracting glyphs as multi-contour paths, and
-preserving counters while applying boolean operations. It also demonstrates
-turning a stroke into filled geometry and subtracting it from its source path
-to create a true inset. Together, these techniques support editable text
-outlines, knockouts, trims, and shape-aware spacing.
-
-### Skia Drawing (WebGL)
-
-This prototype validates Skia Ganesh as the editor's GPU canvas backend. A
-worker-owned WebGL 2 framebuffer is wrapped directly in a GPU-backed
-`SkSurface`, allowing animated vector paths, strokes, circles, antialiasing,
-and alpha compositing without copying a Wasm pixel buffer into the browser.
-Separate surface, drawing, flush, submit, and presentation timings provide a
-baseline for profiling an interactive editor renderer.
-
-### Skia Drawing (CPU)
-
-This prototype runs the same scene-building code against a raster `SkSurface`
-and presents the pixels through the browser's 2D canvas path. It verifies that
-the editor's drawing model can remain independent of its rendering backend,
-while providing a reference for GPU comparisons. The approach can support
-fallback rendering, deterministic previews, headless export, and environments
-where a reliable GPU context is unavailable.
-
-### Elastic text
-
-This prototype exercises the responsive text-frame behavior required in a
-design editor. Skia Paragraph handles shaping, fallback and loaded font
-families, inline styles, line breaking, clipping, and horizontal and vertical
-alignment while its container continuously changes width. It demonstrates how
-editable text can reflow predictably inside resizable frames and how alignment
-controls can map onto the underlying layout engine.
-
-### Envelope Distort
-
-This prototype implements vector envelope warping as a bicubic Bézier
-free-form deformation. Skia Paragraph glyph outlines are densely subdivided,
-normalized into the patch's parameter domain, and evaluated through an animated
-4 × 4 control lattice. Because the mapping operates on compound path contours
-instead of a rasterized text image, counters remain holes and the result stays
-editable vector geometry.
-
-### SkSL Image Proc
-
-This prototype validates SkSL runtime effects as a foundation for
-non-destructive image adjustments. An image shader is supplied as a child to a
-GPU runtime effect, while uniforms control channel remapping without rebuilding
-the source image. The same pattern can power live color transforms, filters,
-blend effects, and parameterized previews in an editor while keeping image
-sampling and processing on the GPU.
-
-### Shape intersection
-
-This prototype stress-tests the geometry and compositing primitives behind
-boolean shape tools. It applies Skia Path Ops to curved, concave, and
-multi-contour paths, including even-odd holes, while retaining deterministic
-identities for resulting regions. Drawing fills separately from clear-blended
-outlines demonstrates erasing boundaries after composition. These capabilities
-map directly to union, intersect, subtract, divide, compound-path, and
-shape-builder workflows in a design editor.
-
-### Shape tracing
-
-This prototype demonstrates how a design editor can expose and traverse the
-geometry of text outlines and compound shapes. It converts a glyph into a
-multi-contour Skia path, measures each outer and inner boundary independently,
-and derives positions and tangents at arbitrary distances. These capabilities
-support path-direction inspection, animated motion paths, evenly distributed
-anchors, contour-aware editing tools, and precise placement along vector
-boundaries.
-
-### Shape Morphing
-
-This prototype exercises the path correspondence needed for editable vector
-shape transitions. It normalizes closed contours into synchronized cubic
-segments, aligns structural features and holes, and interpolates their control
-points while preserving bounded topology. The exact source and target paths
-are retained as endpoint invariants, so an animation or editor operation can
-arrive at the supplied geometry without approximation drift.
-
-### Vortex Field
-
-Each vortex defines a signed radial angle field. For a sample at distance
-`d < radius`, the engine rotates it around the field center by up to three full
-turns, multiplied by `1 - smoothstep(d / radius)`; the sign selects clockwise
-or counter-clockwise rotation. Skia Path Ops splits each source shape into
-untouched outside geometry and intersection pieces for the active circles.
-Only those intersection pieces are densely sampled and reconstructed as cubic
-Bézier contours with Catmull–Rom splines; outside pieces remain unsampled. The
-source fill rule is retained so compound-path holes survive deformation.
-
-Build the standalone Wasm demo separately:
+## Build the standalone Wasm separately
 
 ```sh
-./scripts/wasm-build-and-export
+./scripts/wasm-build-and-export.sh
 ```
 
-Select **Skia Drawing (WebGL)** in the app to run the native Skia Ganesh demo.
-Skia wraps the WebGL canvas framebuffer as a GPU-backed `SkSurface` and draws
-to it without a Wasm pixel buffer or a 2D-canvas upload.
+## About the fiddles
 
-Select **Skia Drawing (CPU)** to run the exact same Skia draw function against a
-raster `SkSurface`. Both variants report aligned `surface`, `scene-draw`, and
-`present` timings every 120 frames.
+- [Text Reflow](docs/about-fiddles.md#text-reflow)
+- [Text Cutting](docs/about-fiddles.md#text-cutting)
+- [Text Tracing](docs/about-fiddles.md#text-tracing)
+- [Text Morphing](docs/about-fiddles.md#text-morphing)
+- [Envelope Distort](docs/about-fiddles.md#env-distort)
+- [Mesh Warp](docs/about-fiddles.md#mesh-warp)
+- [Swirl Deform](docs/about-fiddles.md#swirl-deform)
+- [Pucker and Bloat](docs/about-fiddles.md#pucker-bloat)
+- [Shape intersection](docs/about-fiddles.md#shape-intersection)
+- [Contour Lines](docs/about-fiddles.md#contour-lines)
+- [SkSL Shader](docs/about-fiddles.md#sksl-shader)
+- [Scene Benchmark (WebGL)](docs/about-fiddles.md#scene-benchmark-webgl)
+- [Scene Benchmark (CPU)](docs/about-fiddles.md#scene-benchmark-cpu)

@@ -3,6 +3,22 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "pucker_bloat",
+    srcs = ["pucker_bloat.cc"],
+    hdrs = ["pucker_bloat.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "pucker_bloat_test",
+    srcs = ["pucker_bloat_test.cc"],
+    deps = [
+        ":pucker_bloat",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
     name = "bicubic_bezier_patch",
     srcs = ["bicubic_bezier_patch.cc"],
     hdrs = ["bicubic_bezier_patch.h"],

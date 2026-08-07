@@ -3,9 +3,30 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "mesh_deform_fiddle",
-    srcs = ["mesh_deform_fiddle.cc"],
-    hdrs = ["mesh_deform_fiddle.h"],
+    name = "pucker_bloat_fiddle",
+    srcs = ["pucker_bloat_fiddle.cc"],
+    hdrs = ["pucker_bloat_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:catmull_rom_spline",
+        "//geometry:pucker_bloat",
+        "//graphics:canvas_legends",
+        "//graphics:canvas_widgets",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "//utils:perlin_noise",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "mesh_warp_fiddle",
+    srcs = ["mesh_warp_fiddle.cc"],
+    hdrs = ["mesh_warp_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -14,7 +35,7 @@ cc_library(
         "//core:fiddle_base",
         "//geometry:shape_builder",
         "//graphics:canvas_legends",
-        "//graphics:mesh_deformer",
+        "//graphics:mesh_warper",
         "//graphics:webgl_canvas_context",
         "//text:skia_font_manager",
         "//utils:color_utils",
@@ -64,9 +85,9 @@ cc_library(
 )
 
 cc_library(
-    name = "elastic_text_fiddle",
-    srcs = ["elastic_text_fiddle.cc"],
-    hdrs = ["elastic_text_fiddle.h"],
+    name = "text_reflow_fiddle",
+    srcs = ["text_reflow_fiddle.cc"],
+    hdrs = ["text_reflow_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -84,9 +105,9 @@ cc_library(
 )
 
 cc_library(
-    name = "sksl_image_proc_fiddle",
-    srcs = ["sksl_image_proc_fiddle.cc"],
-    hdrs = ["sksl_image_proc_fiddle.h"],
+    name = "sksl_shader_fiddle",
+    srcs = ["sksl_shader_fiddle.cc"],
+    hdrs = ["sksl_shader_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -118,9 +139,9 @@ cc_library(
 )
 
 cc_library(
-    name = "shape_tracing_fiddle",
-    srcs = ["shape_tracing_fiddle.cc"],
-    hdrs = ["shape_tracing_fiddle.h"],
+    name = "text_tracing_fiddle",
+    srcs = ["text_tracing_fiddle.cc"],
+    hdrs = ["text_tracing_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -135,9 +156,9 @@ cc_library(
 )
 
 cc_library(
-    name = "shape_morphing_fiddle",
-    srcs = ["shape_morphing_fiddle.cc"],
-    hdrs = ["shape_morphing_fiddle.h"],
+    name = "text_morphing_fiddle",
+    srcs = ["text_morphing_fiddle.cc"],
+    hdrs = ["text_morphing_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -152,9 +173,9 @@ cc_library(
 )
 
 cc_library(
-    name = "vortex_field_fiddle",
-    srcs = ["vortex_field_fiddle.cc"],
-    hdrs = ["vortex_field_fiddle.h"],
+    name = "swirl_deform_fiddle",
+    srcs = ["swirl_deform_fiddle.cc"],
+    hdrs = ["swirl_deform_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -171,9 +192,9 @@ cc_library(
 )
 
 cc_library(
-    name = "ribbon_field_fiddle",
-    srcs = ["ribbon_field_fiddle.cc"],
-    hdrs = ["ribbon_field_fiddle.h"],
+    name = "text_cutting_fiddle",
+    srcs = ["text_cutting_fiddle.cc"],
+    hdrs = ["text_cutting_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -192,9 +213,9 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_pulse_benchmark",
-    srcs = ["skia_pulse_benchmark.cc"],
-    hdrs = ["skia_pulse_benchmark.h"],
+    name = "scene_pulse_benchmark",
+    srcs = ["scene_pulse_benchmark.cc"],
+    hdrs = ["scene_pulse_benchmark.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -202,9 +223,9 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_drawing_builder",
-    srcs = ["skia_drawing_builder.cc"],
-    hdrs = ["skia_drawing_builder.h"],
+    name = "scene_benchmark_builder",
+    srcs = ["scene_benchmark_builder.cc"],
+    hdrs = ["scene_benchmark_builder.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -216,16 +237,16 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_webgl_fiddle",
-    srcs = ["skia_webgl_fiddle.cc"],
-    hdrs = ["skia_webgl_fiddle.h"],
+    name = "scene_benchmark_webgl_fiddle",
+    srcs = ["scene_benchmark_webgl_fiddle.cc"],
+    hdrs = ["scene_benchmark_webgl_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":skia_drawing_builder",
-        ":skia_pulse_benchmark",
+        ":scene_benchmark_builder",
+        ":scene_pulse_benchmark",
         "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "@skia//:core",
@@ -233,16 +254,16 @@ cc_library(
 )
 
 cc_library(
-    name = "skia_cpu_fiddle",
-    srcs = ["skia_cpu_fiddle.cc"],
-    hdrs = ["skia_cpu_fiddle.h"],
+    name = "scene_benchmark_cpu_fiddle",
+    srcs = ["scene_benchmark_cpu_fiddle.cc"],
+    hdrs = ["scene_benchmark_cpu_fiddle.h"],
     target_compatible_with = select({
         "//:wasm_build": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":skia_drawing_builder",
-        ":skia_pulse_benchmark",
+        ":scene_benchmark_builder",
+        ":scene_pulse_benchmark",
         "//core:fiddle_base",
         "//graphics:raster_canvas_context",
         "@skia//:core",

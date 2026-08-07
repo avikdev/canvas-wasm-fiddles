@@ -1,6 +1,6 @@
 # Spec Revision: Correspondence Solver with Feature Pivots
 
-> Proposed revision to the existing shape morphing pipeline.
+> Proposed revision to the existing text morphing pipeline.
 
 # Background
 

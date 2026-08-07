@@ -11,21 +11,23 @@ int main() {
   options.seed = 7U;
   input::FakeMouseActions actions(SkRect::MakeWH(120.0F, 80.0F), options);
 
-  input::FakeMouseFrame frame = actions.Advance(5.0F);
+  // 6.25% of the 80-unit shorter side is a five-unit frame step.
+  input::FakeMouseFrame frame = actions.AdvanceByRatio(0.0625F);
   assert(frame.began && frame.in_drag && !frame.ended);
   const SkPoint start = frame.start;
-  frame = actions.Advance(5.0F);
+  frame = actions.AdvanceByRatio(0.0625F);
   assert(!frame.began && frame.in_drag);
   assert(std::abs(std::hypot(frame.current.fX - start.fX,
                              frame.current.fY - start.fY) -
                   5.0F) < 0.001F);
   while (!frame.ended) {
-    frame = actions.Advance(5.0F);
+    frame = actions.AdvanceByRatio(0.0625F);
   }
   assert(frame.current == frame.end);
   assert(std::hypot(frame.end.fX - frame.start.fX,
                     frame.end.fY - frame.start.fY) <= 24.001F);
-  assert(actions.Advance(5.0F).began);
+  assert(actions.AdvanceByRatio(0.0625F).began);
+  assert(!actions.AdvanceByRatio(0.0F).in_drag);
 
   input::FakeMouseActionsOptions mixed_options;
   mixed_options.edge_inset = 10.0F;

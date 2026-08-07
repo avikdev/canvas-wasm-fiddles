@@ -47,6 +47,9 @@ public:
 
   void SetBounds(const SkRect &bounds);
   FakeMouseFrame Advance(float step_distance);
+  // Advances by a fraction of the bounds' shorter side. This is the preferred
+  // animation API when pointer speed must be viewport-independent.
+  FakeMouseFrame AdvanceByRatio(float step_ratio);
 
 private:
   void BeginNextDrag();

@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 
 import type { CanvasWorkerMessage } from "./index";
+import { createSvgBlob } from "./svg-export";
 import CreateCanvasDemoModule, { type FiddleManager } from "./wasm/demo.js";
 
 let fiddleManager: FiddleManager | undefined;
-let selectedFiddle = "ribbon-field";
+let selectedFiddle = "text-reflow";
 let width = 1;
 let height = 1;
 let dpr = 1;
@@ -197,11 +198,12 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
       if (!fiddleManager.isSvgWritable()) {
         throw new Error("This fiddle cannot be represented as SVG.");
       }
-      const svg = fiddleManager.exportSvg();
-      if (!svg) {
+      const svgContent = fiddleManager.exportSvg();
+      if (!svgContent) {
         throw new Error("Skia could not generate the SVG frame.");
       }
-      self.postMessage({ type: "svg-export", requestId: message.requestId, svg });
+      const blob = createSvgBlob(svgContent);
+      self.postMessage({ type: "svg-export", requestId: message.requestId, blob });
     } catch (error) {
       self.postMessage({
         type: "svg-export",

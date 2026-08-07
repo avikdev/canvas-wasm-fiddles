@@ -47,6 +47,6 @@ export type CanvasWorkerStatus =
   | {
       type: "svg-export";
       requestId: number;
-      svg?: string;
+      blob?: Blob;
       error?: string;
     };

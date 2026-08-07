@@ -20,14 +20,14 @@ let supported = $state(true);
 let nextSvgRequestId = 1;
 const pendingSvgRequests = new Map<
   number,
-  { resolve: (svg: string) => void; reject: (error: Error) => void }
+  { resolve: (blob: Blob) => void; reject: (error: Error) => void }
 >();
 
 function send(message: CanvasWorkerMessage, transfer?: Transferable[]) {
   worker?.postMessage(message, transfer ?? []);
 }
 
-export function exportSvg(): Promise<string> {
+export function exportSvg(): Promise<Blob> {
   if (!worker) {
     return Promise.reject(new Error("The canvas worker is not ready."));
   }
@@ -62,10 +62,10 @@ onMount(() => {
       pendingSvgRequests.delete(event.data.requestId);
       if (event.data.error) {
         pending.reject(new Error(event.data.error));
-      } else if (event.data.svg) {
-        pending.resolve(event.data.svg);
+      } else if (event.data.blob) {
+        pending.resolve(event.data.blob);
       } else {
-        pending.reject(new Error("The canvas worker returned an empty SVG."));
+        pending.reject(new Error("The canvas worker returned no SVG file data."));
       }
     } else {
       console.info(`[canvas-worker] ${event.data.message}`);

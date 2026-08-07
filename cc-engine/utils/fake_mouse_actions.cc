@@ -62,6 +62,13 @@ FakeMouseFrame FakeMouseActions::Advance(float step_distance) {
   return frame;
 }
 
+FakeMouseFrame FakeMouseActions::AdvanceByRatio(float step_ratio) {
+  if (!std::isfinite(step_ratio) || step_ratio <= 0.0F) {
+    return {};
+  }
+  return Advance(std::min(bounds_.width(), bounds_.height()) * step_ratio);
+}
+
 void FakeMouseActions::BeginNextDrag() {
   const float inset = std::clamp(
       options_.edge_inset, 0.0F,

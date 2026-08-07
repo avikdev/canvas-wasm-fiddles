@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "build:vercel": "VITE_BASE_PATH=/ turbo build",
     "deploy": "bun run build && gh-pages -d fiddle-app/dist --nojekyll",
     "check": "turbo check",
     "lint": "biome check .",
