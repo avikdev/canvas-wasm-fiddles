@@ -15,9 +15,10 @@ export type Fiddle = {
   color: string;
   initials: string;
   tags: readonly FiddleTag[];
+  disabled?: boolean;
 };
 
-export const fiddles = [
+export const fiddles: readonly Fiddle[] = [
   {
     id: "text-reflow",
     title: "Text Reflow",
@@ -58,6 +59,16 @@ export const fiddles = [
     tags: ["WebGL", "Skia Ganesh", "Advanced"],
   },
   {
+    id: "curve-interpolate",
+    title: "Curve Interpolate",
+    summary:
+      "Interpolates corresponding open curves, distributes them by arc length along a guide, and modulates their perpendicular width with a sinusoidal profile.",
+    technique: "Curve correspondence · arc-length placement · WebGL",
+    color: "#8b1e2d",
+    initials: "CI",
+    tags: ["WebGL", "Skia Ganesh", "Advanced"],
+  },
+  {
     id: "env-distort",
     title: "Envelope Distort",
     summary:
@@ -88,6 +99,16 @@ export const fiddles = [
     tags: ["WebGL", "Skia Ganesh", "Path Ops", "Advanced"],
   },
   {
+    id: "noise-deform",
+    title: "Noise Deform",
+    summary:
+      "Animates a water-like 3D Perlin field across colored text, selectively subdividing and refracting only the letter regions intersecting the moving effect box.",
+    technique: "3D Perlin noise · Path Ops · text outlines",
+    color: "#20a6dd",
+    initials: "ND",
+    tags: ["WebGL", "Skia Ganesh", "Path Ops", "Advanced"],
+  },
+  {
     id: "pucker-bloat",
     title: "Pucker and Bloat",
     summary:
@@ -115,6 +136,16 @@ export const fiddles = [
     technique: "Inclusive regions · Path Ops · WebGL",
     color: "#ffb347",
     initials: "CL",
+    tags: ["WebGL", "Skia Ganesh", "Path Ops", "Advanced"],
+  },
+  {
+    id: "contour-composite",
+    title: "Contour 2: Composite Field",
+    summary:
+      "Combines animated noise with a fixed radial clear zone and renders the resulting contour bands with reusable vector hatch patterns.",
+    technique: "SkPicture hatching · composite field · WebGL",
+    color: "#30afff",
+    initials: "C2",
     tags: ["WebGL", "Skia Ganesh", "Path Ops", "Advanced"],
   },
   {

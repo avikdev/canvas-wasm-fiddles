@@ -30,6 +30,14 @@ Demonstrates measuring and traversing individual path contours in a letter. Foll
 Morphs from one letter shape ito another. Topology-aware interpolation between vector shapes after their
 contours and segments are normalized into corresponding cubic paths.
 
+<a id="curve-interpolate"></a>
+
+## Curve Interpolate
+
+Interpolates corresponding open paths and places uniformly spaced copies along
+a guide path. Each copy follows the guide tangent and a two-cycle sinusoidal
+profile modulates its width from 0.7× to 1.3× while preserving both endpoints.
+
 <a id="env-distort"></a>
 
 ## Envelope Distort
@@ -50,6 +58,15 @@ control lattice and subdivided path geometry.
 
 Inspired after the Illustrator wirl effect, demonstrates a localized circular vector warping through signed radial fields. Uses selective subdivision, and cubic reconstruction of affected path regions.
 
+<a id="noise-deform"></a>
+
+## Noise Deform
+
+Refracts colored text outlines through a moving water-like 3D Perlin field.
+Only the path regions intersecting the animated effect box are finely
+subdivided and displaced; unaffected geometry retains its original outline.
+The artwork cycles through MORNING, DAY, and NIGHT palettes every five seconds.
+
 <a id="pucker-bloat"></a>
 
 ## Pucker and Bloat
@@ -68,6 +85,14 @@ Demonstrates boolean path operations across various types of objects: curved, co
 
 Contour map based on a 2D field (e.g. Perlin noise). Computes layered vector
 contours.
+
+<a id="contour-composite"></a>
+
+## Contour 2: Composite Field
+
+Combines animated noise with a resize-aware radial core, then renders seven
+closely spaced blue contour bands using solid fills and reusable vector hatch
+patterns. The fixed-elevation center is labeled as a clear zone.
 
 <a id="sksl-shader"></a>
 

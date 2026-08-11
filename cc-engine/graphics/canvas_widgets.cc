@@ -48,6 +48,17 @@ TwoSidedSliderGeometry MakeTwoSidedSliderGeometry(const SkRect &track,
   return geometry;
 }
 
+SkRect MakeOneSidedSliderFill(const SkRect &track, float value) {
+  if (!track.isFinite() || track.isEmpty()) {
+    return SkRect::MakeEmpty();
+  }
+  const float normalized =
+      std::isfinite(value) ? std::clamp(value, 0.0F, 1.0F) : 0.0F;
+  return SkRect::MakeLTRB(track.left(), track.top(),
+                          track.left() + track.width() * normalized,
+                          track.bottom());
+}
+
 void DrawTwoSidedSlider(SkCanvas *canvas, const SkRect &bounds, float value,
                         const SkFont &label_font,
                         const TwoSidedSliderStyle &style) {
@@ -111,6 +122,49 @@ void DrawTwoSidedSlider(SkCanvas *canvas, const SkRect &bounds, float value,
             label_font, style.label_color);
   DrawLabel(canvas, positive_label, content.right(), bounds.centerY(), true,
             label_font, style.label_color);
+}
+
+void DrawOneSidedSlider(SkCanvas *canvas, const SkRect &bounds, float value,
+                        std::string_view label, const SkFont &label_font,
+                        const OneSidedSliderStyle &style) {
+  if (canvas == nullptr || !bounds.isFinite() || bounds.isEmpty()) {
+    return;
+  }
+  const float padding =
+      std::clamp(style.outer_padding, 0.0F,
+                 std::min(bounds.width(), bounds.height()) * 0.5F);
+  const SkRect track = bounds.makeInset(padding, padding);
+  if (track.isEmpty()) {
+    return;
+  }
+  const SkRect fill = MakeOneSidedSliderFill(track, value);
+  const float radius =
+      std::clamp(style.corner_radius, 0.0F, track.height() * 0.5F);
+
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kFill_Style);
+  paint.setColor(style.background_color);
+  canvas->drawRoundRect(bounds, bounds.height() * 0.5F, bounds.height() * 0.5F,
+                        paint);
+  paint.setColor(style.track_color);
+  canvas->drawRRect(SkRRect::MakeRectXY(track, radius, radius), paint);
+  canvas->save();
+  canvas->clipRRect(SkRRect::MakeRectXY(track, radius, radius),
+                    SkClipOp::kIntersect, true);
+  paint.setColor(style.fill_color);
+  canvas->drawRect(fill, paint);
+  canvas->restore();
+
+  SkRect text_bounds;
+  const float text_width = label_font.measureText(
+      label.data(), label.size(), SkTextEncoding::kUTF8, &text_bounds);
+  const float baseline =
+      bounds.centerY() - (text_bounds.top() + text_bounds.bottom()) * 0.5F;
+  paint.setColor(style.label_color);
+  canvas->drawSimpleText(label.data(), label.size(), SkTextEncoding::kUTF8,
+                         bounds.centerX() - text_width * 0.5F, baseline,
+                         label_font, paint);
 }
 
 } // namespace graphics::canvas_widgets

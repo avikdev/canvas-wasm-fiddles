@@ -4,9 +4,12 @@
 #include <iostream>
 #include <memory>
 
+#include "fiddles/contour_composite_fiddle.h"
 #include "fiddles/contour_lines_fiddle.h"
+#include "fiddles/curve_interpolate_fiddle.h"
 #include "fiddles/envelope_distort_fiddle.h"
 #include "fiddles/mesh_warp_fiddle.h"
+#include "fiddles/noise_deform_fiddle.h"
 #include "fiddles/pucker_bloat_fiddle.h"
 #include "fiddles/scene_benchmark_cpu_fiddle.h"
 #include "fiddles/scene_benchmark_webgl_fiddle.h"
@@ -22,6 +25,14 @@ namespace {
 
 std::unique_ptr<FiddleBase> CreateContourLines() {
   return std::make_unique<ContourLinesFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateContourComposite() {
+  return std::make_unique<ContourCompositeFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateCurveInterpolate() {
+  return std::make_unique<CurveInterpolateFiddle>();
 }
 
 std::unique_ptr<FiddleBase> CreateTextCutting() {
@@ -72,6 +83,10 @@ std::unique_ptr<FiddleBase> CreateSwirlDeform() {
   return std::make_unique<SwirlDeformFiddle>();
 }
 
+std::unique_ptr<FiddleBase> CreateNoiseDeform() {
+  return std::make_unique<NoiseDeformFiddle>();
+}
+
 } // namespace
 
 FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
@@ -83,23 +98,28 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
   registry_.Register("text-cutting", &CreateTextCutting);
   registry_.Register("text-tracing", &CreateTextTracing);
   registry_.Register("text-morphing", &CreateTextMorphing);
+  registry_.Register("curve-interpolate", &CreateCurveInterpolate);
   registry_.Register("env-distort", &CreateEnvelopeDistort);
   registry_.Register("mesh-warp", &CreateMeshWarp);
   registry_.Register("swirl-deform", &CreateSwirlDeform);
+  registry_.Register("noise-deform", &CreateNoiseDeform);
   registry_.Register("pucker-bloat", &CreatePuckerBloat);
   registry_.Register("shape-intersection", &CreateShapeIntersection);
   registry_.Register("contour-lines", &CreateContourLines);
+  registry_.Register("contour-composite", &CreateContourComposite);
   registry_.Register("sksl-shader", &CreateSkslShader);
   registry_.Register("scene-benchmark-webgl", &CreateSceneBenchmarkWebGl);
   registry_.Register("scene-benchmark-cpu", &CreateSceneBenchmarkCpu);
 
-  std::cout
-      << "[cc-engine/stdout] FiddleManager initialized with "
-      << "text-reflow, text-cutting, text-tracing, text-morphing, env-distort, "
-         "mesh-warp, swirl-deform, pucker-bloat, shape-intersection, "
-         "contour-lines, sksl-shader, scene-benchmark-webgl, and "
-         "scene-benchmark-cpu."
-      << std::endl;
+  std::cout << "[cc-engine/stdout] FiddleManager initialized with "
+            << "text-reflow, text-cutting, text-tracing, text-morphing, "
+               "curve-interpolate, env-distort, "
+               "mesh-warp, swirl-deform, noise-deform, pucker-bloat, "
+               "shape-intersection, "
+               "contour-lines, contour-composite, sksl-shader, "
+               "scene-benchmark-webgl, and "
+               "scene-benchmark-cpu."
+            << std::endl;
   std::cerr << "[cc-engine/stderr] C++ canvas error stream is connected."
             << std::endl;
 

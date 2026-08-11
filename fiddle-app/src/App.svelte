@@ -94,7 +94,7 @@ onMount(() => {
       <Separator />
 
       <nav aria-label="Fiddles" class="fiddle-nav">
-        {#each fiddles as fiddle}
+        {#each fiddles.filter((f) => !(f.disabled ?? false)) as fiddle}
           <div class="fiddle-link-shell" class:active={selectedId === fiddle.id}>
             <Button
               variant="ghost"

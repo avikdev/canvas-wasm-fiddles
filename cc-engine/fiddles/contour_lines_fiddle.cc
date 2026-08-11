@@ -87,8 +87,6 @@ geometry::ScalarGrid BuildScalarGrid(const SkRect &bounds, float device_scale,
     }
   }
 
-  // Normalizing the current coherent slice makes every configured level useful
-  // even though a finite Perlin sample rarely reaches the theoretical extrema.
   const float range = maximum - minimum;
   if (range <= 0.000001F || !std::isfinite(range)) {
     std::fill(grid.values.begin(), grid.values.end(), 0.5F);
@@ -120,7 +118,6 @@ bool ContourLinesFiddle::EnsureResources() {
     return false;
   }
   initialization_attempted_ = true;
-
   auto webgl = std::make_unique<WebGlCanvasContext>();
   if (!webgl->Initialize(WebGlResource())) {
     return false;
@@ -133,28 +130,19 @@ void ContourLinesFiddle::Render(double time_seconds) {
   if (!EnsureResources()) {
     return;
   }
+  time_seconds_ = time_seconds;
   const int width = PixelWidth();
   const int height = PixelHeight();
-  if (!UpdateState(time_seconds, width, height)) {
-    return;
-  }
   SkSurface *surface = webgl_->AcquireSurface(width, height);
   if (surface == nullptr) {
     return;
   }
   DrawFrame(surface->getCanvas(), width, height);
-
-  const WebGlPresentResult present = webgl_->FlushAndPresent();
-  if (!present.success) {
+  if (!webgl_->FlushAndPresent().success) {
     std::cerr << "[cc-engine/stderr] Contour Lines could not submit its WebGL "
                  "frame."
               << std::endl;
   }
-}
-
-bool ContourLinesFiddle::UpdateState(double time_seconds, int, int) {
-  time_seconds_ = time_seconds;
-  return true;
 }
 
 void ContourLinesFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
@@ -169,24 +157,22 @@ void ContourLinesFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
     return;
   }
 
-  constexpr auto kLevels = MakeContourLevels<kContourLevelCount>();
-  const float logical_canvas_short_edge =
-      static_cast<float>(std::min(Width(), Height()));
+  constexpr auto kLevels =
+      MakeContourLevels<ContourLinesFiddle::kContourLevelCount>();
   const geometry::ScalarGrid grid =
-      BuildScalarGrid(field_bounds, device_scale, logical_canvas_short_edge,
+      BuildScalarGrid(field_bounds, device_scale,
+                      static_cast<float>(std::min(Width(), Height())),
                       time_seconds_, field_seed_);
   const std::optional<geometry::ContourRegionSet> regions =
       geometry::BuildInclusiveContourRegions(grid, kLevels,
                                              kContourSplineTension);
+  canvas->clear(kCanvasColor);
   if (!regions.has_value()) {
-    canvas->clear(kCanvasColor);
     return;
   }
 
-  canvas->clear(kCanvasColor);
   canvas->save();
   canvas->clipRect(field_bounds, SkClipOp::kIntersect, true);
-
   SkPaint paint;
   paint.setAntiAlias(true);
   for (std::size_t region_index = regions->size(); region_index-- > 0U;) {
@@ -194,9 +180,8 @@ void ContourLinesFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
     if (region == nullptr || region->isEmpty()) {
       continue;
     }
-    const std::size_t color_index = regions->size() - region_index - 1U;
     paint.setStyle(SkPaint::kFill_Style);
-    paint.setColor4f(band_colors_[color_index]);
+    paint.setColor4f(band_colors_[regions->size() - region_index - 1U]);
     canvas->drawPath(*region, paint);
   }
 
@@ -205,16 +190,11 @@ void ContourLinesFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
   paint.setStrokeCap(SkPaint::kRound_Cap);
   paint.setStrokeJoin(SkPaint::kRound_Join);
   paint.setColor(SK_ColorBLACK);
-  for (std::size_t region_index = 0; region_index < regions->size();
-       ++region_index) {
-    const SkPath *region = regions->InclusiveRegion(region_index);
+  for (std::size_t index = 0; index < regions->size(); ++index) {
+    const SkPath *region = regions->InclusiveRegion(index);
     if (region != nullptr && !region->isEmpty()) {
       canvas->drawPath(*region, paint);
     }
   }
-
-  // TODO: When the UI requests exactly one elevation band, draw
-  // regions->ExclusiveRegion(index) so that isolated compound region retains
-  // its holes without requiring the other inclusive layers.
   canvas->restore();
 }

@@ -3,6 +3,43 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "noise_deform_fiddle",
+    srcs = ["noise_deform_fiddle.cc"],
+    hdrs = ["noise_deform_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:noise_deform",
+        "//graphics:canvas_widgets",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "//utils:perlin_noise",
+        "@skia//:core",
+        "@skia//:pathops",
+    ],
+)
+
+cc_library(
+    name = "curve_interpolate_fiddle",
+    srcs = ["curve_interpolate_fiddle.cc"],
+    hdrs = ["curve_interpolate_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:curve_interpolate",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
     name = "pucker_bloat_fiddle",
     srcs = ["pucker_bloat_fiddle.cc"],
     hdrs = ["pucker_bloat_fiddle.h"],
@@ -58,6 +95,24 @@ cc_library(
         "//geometry:contour_regions",
         "//graphics:webgl_canvas_context",
         "//utils:color_utils",
+        "//utils:perlin_noise",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "contour_composite_fiddle",
+    srcs = ["contour_composite_fiddle.cc"],
+    hdrs = ["contour_composite_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:contour_regions",
+        "//graphics:webgl_canvas_context",
+        "//text:skia_font_manager",
         "//utils:perlin_noise",
         "@skia//:core",
     ],

@@ -3,6 +3,46 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "noise_deform",
+    srcs = ["noise_deform.cc"],
+    hdrs = ["noise_deform.h"],
+    deps = [
+        "//utils:perlin_noise",
+        "@skia//:core",
+    ],
+)
+
+cc_test(
+    name = "noise_deform_test",
+    srcs = ["noise_deform_test.cc"],
+    deps = [
+        ":noise_deform",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
+    name = "curve_interpolate",
+    srcs = ["curve_interpolate.cc"],
+    hdrs = ["curve_interpolate.h"],
+    deps = [
+        "//morphing:geometry_kernel",
+        "//morphing:path_geometry",
+        "//morphing:shape_morpher",
+        "@skia//:core",
+    ],
+)
+
+cc_test(
+    name = "curve_interpolate_test",
+    srcs = ["curve_interpolate_test.cc"],
+    deps = [
+        ":curve_interpolate",
+        "@skia//:core",
+    ],
+)
+
+cc_library(
     name = "pucker_bloat",
     srcs = ["pucker_bloat.cc"],
     hdrs = ["pucker_bloat.h"],
@@ -58,7 +98,6 @@ cc_library(
         ":catmull_rom_spline",
         ":marching_squares",
         "@skia//:core",
-        "@skia//:pathops",
     ],
 )
 

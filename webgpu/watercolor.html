@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU Watercolor Fluid Simulation - Dynamic 3D Force Field</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #eeeeee;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #controls {
+            background: #1e1e1e;
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+            gap: 5px;
+        }
+        input[type="color"] {
+            border: none;
+            width: 40px;
+            height: 30px;
+            cursor: pointer;
+            border-radius: 4px;
+            background: transparent;
+        }
+        button {
+            padding: 8px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #1d4ed8; }
+        canvas {
+            border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            background-color: #f7f5f0;
+        }
+        #error { color: #f87171; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>WebGPU Watercolor Fluid (Time-Varying Force Field)</h2>
+
+    <div id="controls">
+        <div class="control-group">
+            <label>Base Color</label>
+            <input type="color" id="baseColor" value="#2563eb">
+        </div>
+        <div class="control-group">
+            <label>Tint 1</label>
+            <input type="color" id="tint1" value="#dc2626">
+        </div>
+        <div class="control-group">
+            <label>Tint 2</label>
+            <input type="color" id="tint2" value="#f59e0b">
+        </div>
+        <div class="control-group">
+            <label>Turbulence Morph Speed</label>
+            <input type="range" id="timeSpeed" min="0.05" max="1.0" step="0.05" value="0.25">
+        </div>
+        <div class="control-group">
+            <label>Dilution (Bleed Speed)</label>
+            <input type="range" id="dilution" min="0.05" max="0.8" step="0.05" value="0.35">
+        </div>
+        <div class="control-group">
+            <label>Variation (Paper Fibers)</label>
+            <input type="range" id="variation" min="0.1" max="1.0" step="0.05" value="0.6">
+        </div>
+        <div class="control-group">
+            <label>Edge Darkening</label>
+            <input type="range" id="edgeDarkening" min="0.0" max="3.0" step="0.1" value="1.8">
+        </div>
+        <button id="toggleBtn">Pause</button>
+        <button id="resetBtn">Randomize & Reset</button>
+    </div>
+
+    <canvas id="webgpu-canvas" width="800" height="600"></canvas>
+    <div id="error"></div>
+
+<script type="module">
+async function initWebGPU() {
+    const canvas = document.getElementById('webgpu-canvas');
+    const errorDiv = document.getElementById('error');
+
+    if (!navigator.gpu) {
+        errorDiv.innerText = "WebGPU is not supported on this browser/device.";
+        return;
+    }
+
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        errorDiv.innerText = "Failed to get WebGPU adapter.";
+        return;
+    }
+
+    const device = await adapter.requestDevice();
+    const context = canvas.getContext('webgpu');
+    const format = navigator.gpu.getPreferredCanvasFormat();
+
+    context.configure({
+        device: device,
+        format: format,
+        alphaMode: 'opaque'
+    });
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // --- WGSL SHADERS ---
+    const shaderCode = `
+    struct Params {
+        baseColor : vec3<f32>,
+        dilution  : f32,
+        tint1     : vec3<f32>,
+        variation : f32,
+        tint2     : vec3<f32>,
+        edgeDark  : f32,
+        seed      : f32,
+        time      : f32,
+    };
+
+    @group(0) @binding(0) var<uniform> params : Params;
+    @group(0) @binding(1) var inputTex : texture_2d<f32>;
+    @group(0) @binding(2) var outputTex : texture_storage_2d<rgba32float, write>;
+
+    // 3D Hash & Pseudo-Noise Functions for (x, y, time) fields
+    fn hash31(p: vec3<f32>) -> f32 {
+        var p3 = fract(p * 0.1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
+    }
+
+    fn noise3D(p: vec3<f32>) -> f32 {
+        let i = floor(p);
+        let f = fract(p);
+        let u = f * f * (3.0 - 2.0 * f);
+
+        return mix(
+            mix(
+                mix(hash31(i + vec3(0.0, 0.0, 0.0)), hash31(i + vec3(1.0, 0.0, 0.0)), u.x),
+                mix(hash31(i + vec3(0.0, 1.0, 0.0)), hash31(i + vec3(1.0, 1.0, 0.0)), u.x),
+                u.y
+            ),
+            mix(
+                mix(hash31(i + vec3(0.0, 0.0, 1.0)), hash31(i + vec3(1.0, 0.0, 1.0)), u.x),
+                mix(hash31(i + vec3(0.0, 1.0, 1.0)), hash31(i + vec3(1.0, 1.0, 1.0)), u.x),
+                u.y
+            ),
+            u.z
+        );
+    }
+
+    fn fbm3D(p: vec3<f32>) -> f32 {
+        var val = 0.0;
+        var amp = 0.5;
+        var pos = p;
+        for (var i = 0; i < 4; i++) {
+            val += amp * noise3D(pos);
+            pos *= 2.02;
+            amp *= 0.5;
+        }
+        return val;
+    }
+
+    // 1. COMPUTE PASS: Advection along Time-Varying (x, y, time) Noise Field
+    @compute @workgroup_size(16, 16)
+    fn computeMain(@builtin(global_invocation_id) id : vec3<u32>) {
+        let coord = vec2<i32>(id.xy);
+        let size = vec2<i32>(textureDimensions(inputTex));
+        if (coord.x >= size.x || coord.y >= size.y) { return; }
+
+        let fCoord = vec2<f32>(coord);
+
+        // 3D Space-Time Noise Coordinates (x, y, time)
+        let spaceScale = 0.006;
+        let stCoord = vec3<f32>(
+            fCoord * spaceScale + vec2<f32>(params.seed, params.seed * 0.5),
+            params.time
+        );
+
+        // Dynamic angle generated from mutating 3D field
+        let angle = fbm3D(stCoord) * 12.56; 
+        
+        let velocity = vec2<f32>(cos(angle), sin(angle)) * (0.3 + params.dilution * 1.5);
+
+        // Advect pigment backwards along mutating flow field
+        let sampleCoord = vec2<i32>(fCoord - velocity);
+        let advectedCell = textureLoad(inputTex, clamp(sampleCoord, vec2(0), size - 1), 0);
+
+        // Multi-directional neighbor laplacian diffusion
+        let left   = textureLoad(inputTex, clamp(coord + vec2(-2, 0), vec2(0), size - 1), 0);
+        let right  = textureLoad(inputTex, clamp(coord + vec2(2, 0), vec2(0), size - 1), 0);
+        let top    = textureLoad(inputTex, clamp(coord + vec2(0, 2), vec2(0), size - 1), 0);
+        let bottom = textureLoad(inputTex, clamp(coord + vec2(0, -2), vec2(0), size - 1), 0);
+
+        let laplacian = (left + right + top + bottom) - (4.0 * advectedCell);
+        
+        let paperGrain = noise3D(vec3<f32>(fCoord * 0.1, params.seed));
+        let diffRate = params.dilution * 0.15 * (0.3 + 0.7 * paperGrain);
+
+        var updatedCell = advectedCell + laplacian * diffRate;
+        
+        textureStore(outputTex, coord, clamp(updatedCell, vec4<f32>(0.0), vec4<f32>(2.0)));
+    }
+
+    // 2. RENDER PASS (Vertex Shader)
+    struct VertexOutput {
+        @builtin(position) pos : vec4<f32>,
+        @location(0) uv : vec2<f32>,
+    };
+
+    @vertex
+    fn vertMain(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {
+        var pos = array<vec2<f32>, 4>(
+            vec2<f32>(-1.0, -1.0),
+            vec2<f32>( 1.0, -1.0),
+            vec2<f32>(-1.0,  1.0),
+            vec2<f32>( 1.0,  1.0)
+        );
+        var uvs = array<vec2<f32>, 4>(
+            vec2<f32>(0.0, 1.0),
+            vec2<f32>(1.0, 1.0),
+            vec2<f32>(0.0, 0.0),
+            vec2<f32>(1.0, 0.0)
+        );
+        var out : VertexOutput;
+        out.pos = vec4<f32>(pos[vertexIndex], 0.0, 1.0);
+        out.uv = uvs[vertexIndex];
+        return out;
+    }
+
+    // RENDER PASS (Fragment Shader)
+    @group(0) @binding(1) var simResult : texture_2d<f32>;
+
+    @fragment
+    fn fragMain(@location(0) uv : vec2<f32>) -> @location(0) vec4<f32> {
+        let size = vec2<f32>(textureDimensions(simResult));
+        
+        // Deckled paper boundary distortion
+        let warpDir = vec2<f32>(
+            fbm3D(vec3<f32>(uv * 10.0, params.seed)),
+            fbm3D(vec3<f32>(uv * 10.0 + vec2<f32>(4.3, 2.8), params.seed))
+        );
+        let distortedUV = uv + (warpDir - 0.5) * 0.02 * params.variation;
+        let coord = vec2<i32>(distortedUV * size);
+
+        let simData = textureLoad(simResult, clamp(coord, vec2(0), vec2<i32>(size) - 1), 0);
+        let density = simData.a; 
+
+        let paperColor = vec3<f32>(0.97, 0.96, 0.93);
+
+        if (density <= 0.005) {
+            return vec4<f32>(paperColor, 1.0);
+        }
+
+        // Coffee Ring edge buildup
+        let leftD  = textureLoad(simResult, clamp(coord + vec2(-4, 0), vec2(0), vec2<i32>(size) - 1), 0).a;
+        let rightD = textureLoad(simResult, clamp(coord + vec2(4, 0), vec2(0), vec2<i32>(size) - 1), 0).a;
+        let topD   = textureLoad(simResult, clamp(coord + vec2(0, 4), vec2(0), vec2<i32>(size) - 1), 0).a;
+        let botD   = textureLoad(simResult, clamp(coord + vec2(0, -4), vec2(0), vec2<i32>(size) - 1), 0).a;
+        
+        let grad = length(vec2<f32>(rightD - leftD, topD - botD));
+        let coffeeRing = 1.0 + pow(grad, 0.7) * params.edgeDark * 4.0;
+
+        // Dynamic Multi-Tint Blending
+        let tint1Mask = smoothstep(0.2, 0.8, fbm3D(vec3<f32>(distortedUV * 5.0, params.seed + 1.5)));
+        let tint2Mask = smoothstep(0.3, 0.9, fbm3D(vec3<f32>(distortedUV * 8.0, params.seed + 3.2)));
+
+        var mixedColor = mix(params.baseColor, params.tint1, tint1Mask * params.variation);
+        mixedColor = mix(mixedColor, params.tint2, tint2Mask * params.variation);
+
+        // Subtractive Multiply pigment composition over paper texture
+        let paperGrain = noise3D(vec3<f32>(distortedUV * size * 0.6, 1.0));
+        let finalDensity = clamp((density + paperGrain * 0.15 - 0.05) * coffeeRing, 0.0, 1.0);
+
+        let finalRGB = mix(paperColor, mixedColor * paperColor, finalDensity);
+
+        return vec4<f32>(finalRGB, 1.0);
+    }
+    `;
+
+    const shaderModule = device.createShaderModule({ code: shaderCode });
+
+    // --- TEXTURES (Ping-Pong Setup using rgba32float) ---
+    const textureDesc = {
+        size: [width, height],
+        format: 'rgba32float',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_DST
+    };
+    let texA = device.createTexture(textureDesc);
+    let texB = device.createTexture(textureDesc);
+
+    // Initialize star polygon shape
+    function initializePolygonData() {
+        const data = new Float32Array(width * height * 4);
+        const cx = width / 2;
+        const cy = height / 2;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                
+                const nx = (x - cx) / 160.0;
+                const ny = (y - cy) / 160.0;
+                
+                const angle = Math.atan2(ny, nx);
+                const dist = Math.sqrt(nx * nx + ny * ny);
+                const starRadius = 0.55 + 0.3 * Math.cos(angle * 5.0);
+
+                if (dist < starRadius) {
+                    data[idx + 0] = 0.0;
+                    data[idx + 1] = 0.0;
+                    data[idx + 2] = 0.0;
+                    data[idx + 3] = 0.95; // Initial Density
+                }
+            }
+        }
+
+        device.queue.writeTexture(
+            { texture: texA },
+            data,
+            { bytesPerRow: width * 16 },
+            { width, height }
+        );
+    }
+
+    // --- UNIFORM BUFFER (96 Bytes) ---
+    const uniformBuffer = device.createBuffer({
+        size: 96,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    });
+
+    let currentSeed = Math.random() * 100.0;
+    let timeAcc = 0.0;
+
+    function hexToRgb(hex) {
+        const c = parseInt(hex.substring(1), 16);
+        return [(c >> 16 & 255) / 255, (c >> 8 & 255) / 255, (c & 255) / 255];
+    }
+
+    function updateUniforms() {
+        const base = hexToRgb(document.getElementById('baseColor').value);
+        const t1 = hexToRgb(document.getElementById('tint1').value);
+        const t2 = hexToRgb(document.getElementById('tint2').value);
+        const dilution = parseFloat(document.getElementById('dilution').value);
+        const variation = parseFloat(document.getElementById('variation').value);
+        const edgeDark = parseFloat(document.getElementById('edgeDarkening').value);
+
+        const floatData = new Float32Array([
+            ...base, 0.0,
+            dilution, 0.0, 0.0, 0.0,
+            ...t1, 0.0,
+            variation, 0.0, 0.0, 0.0,
+            ...t2, 0.0,
+            edgeDark, currentSeed, timeAcc, 0.0
+        ]);
+
+        device.queue.writeBuffer(uniformBuffer, 0, floatData);
+    }
+
+    initializePolygonData();
+    updateUniforms();
+
+    // --- PIPELINES ---
+    const bindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            { binding: 0, visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+            { binding: 1, visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT, texture: { sampleType: 'unfilterable-float' } },
+            { binding: 2, visibility: GPUShaderStage.COMPUTE, storageTexture: { access: 'write-only', format: 'rgba32float' } }
+        ]
+    });
+
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+
+    const computePipeline = device.createComputePipeline({
+        layout: pipelineLayout,
+        compute: { module: shaderModule, entryPoint: 'computeMain' }
+    });
+
+    const renderPipeline = device.createRenderPipeline({
+        layout: pipelineLayout,
+        vertex: { module: shaderModule, entryPoint: 'vertMain' },
+        fragment: { module: shaderModule, entryPoint: 'fragMain', targets: [{ format: format }] },
+        primitive: { topology: 'triangle-strip' }
+    });
+
+    function createBindGroup(readTex, writeTex) {
+        return device.createBindGroup({
+            layout: bindGroupLayout,
+            entries: [
+                { binding: 0, resource: { buffer: uniformBuffer } },
+                { binding: 1, resource: readTex.createView() },
+                { binding: 2, resource: writeTex.createView() }
+            ]
+        });
+    }
+
+    let bindGroupA = createBindGroup(texA, texB);
+    let bindGroupB = createBindGroup(texB, texA);
+
+    let isRunning = true;
+    let stepCount = 0;
+
+    document.getElementById('toggleBtn').onclick = (e) => {
+        isRunning = !isRunning;
+        e.target.innerText = isRunning ? 'Pause' : 'Resume';
+    };
+
+    document.getElementById('resetBtn').onclick = () => {
+        currentSeed = Math.random() * 100.0;
+        timeAcc = 0.0;
+        initializePolygonData();
+    };
+
+    ['baseColor', 'tint1', 'tint2', 'dilution', 'variation', 'edgeDarkening'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateUniforms);
+    });
+
+    // --- MAIN ANIMATION LOOP ---
+    function frame() {
+        if (isRunning) {
+            const timeSpeed = parseFloat(document.getElementById('timeSpeed').value);
+            timeAcc += 0.01 * timeSpeed;
+        }
+
+        updateUniforms();
+
+        const encoder = device.createCommandEncoder();
+
+        if (isRunning) {
+            const computePass = encoder.beginComputePass();
+            computePass.setPipeline(computePipeline);
+            computePass.setBindGroup(0, (stepCount % 2 === 0) ? bindGroupA : bindGroupB);
+            computePass.dispatchWorkgroups(Math.ceil(width / 16), Math.ceil(height / 16));
+            computePass.end();
+            stepCount++;
+        }
+
+        const renderPass = encoder.beginRenderPass({
+            colorAttachments: [{
+                view: context.getCurrentTexture().createView(),
+                clearValue: { r: 0.97, g: 0.96, b: 0.93, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }]
+        });
+
+        renderPass.setPipeline(renderPipeline);
+        renderPass.setBindGroup(0, (stepCount % 2 === 0) ? bindGroupA : bindGroupB);
+        renderPass.draw(4);
+        renderPass.end();
+
+        device.queue.submit([encoder.finish()]);
+        requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+}
+
+initWebGPU();
+</script>
+</body>
+</html>

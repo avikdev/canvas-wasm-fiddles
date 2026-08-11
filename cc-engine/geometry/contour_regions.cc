@@ -4,13 +4,13 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "geometry/catmull_rom_spline.h"
 #include "include/core/SkPathBuilder.h"
-#include "include/pathops/SkPathOps.h"
 
 namespace geometry {
 namespace {
@@ -84,6 +84,39 @@ ClipAboveThreshold(const std::vector<ScalarVertex> &input, float threshold) {
         input[(index + input.size() - 1U) % input.size()];
     const bool current_inside = current.value >= threshold;
     const bool previous_inside = previous.value >= threshold;
+    if (current_inside != previous_inside) {
+      const float denominator = current.value - previous.value;
+      const float amount =
+          std::abs(denominator) <= 0.000001F
+              ? 0.5F
+              : std::clamp((threshold - previous.value) / denominator, 0.0F,
+                           1.0F);
+      output.push_back({
+          {std::lerp(previous.point.fX, current.point.fX, amount),
+           std::lerp(previous.point.fY, current.point.fY, amount)},
+          threshold,
+      });
+    }
+    if (current_inside) {
+      output.push_back(current);
+    }
+  }
+  return output;
+}
+
+std::vector<ScalarVertex>
+ClipBelowThreshold(const std::vector<ScalarVertex> &input, float threshold) {
+  std::vector<ScalarVertex> output;
+  if (input.empty()) {
+    return output;
+  }
+  output.reserve(input.size() + 1U);
+  for (std::size_t index = 0; index < input.size(); ++index) {
+    const ScalarVertex &current = input[index];
+    const ScalarVertex &previous =
+        input[(index + input.size() - 1U) % input.size()];
+    const bool current_inside = current.value < threshold;
+    const bool previous_inside = previous.value < threshold;
     if (current_inside != previous_inside) {
       const float denominator = current.value - previous.value;
       const float amount =
@@ -243,6 +276,55 @@ SkPath BuildThresholdRegion(const ScalarGrid &grid, float threshold,
   return region.detach();
 }
 
+SkPath BuildExclusiveRegion(const ScalarGrid &grid,
+                            std::optional<float> lower_threshold,
+                            std::optional<float> upper_threshold) {
+  std::unordered_map<EdgeKey, BoundaryEdge, EdgeKeyHash> boundary_edges;
+  boundary_edges.reserve(static_cast<std::size_t>(grid.column_count - 1) *
+                         static_cast<std::size_t>(grid.row_count - 1));
+  for (int row = 0; row < grid.row_count - 1; ++row) {
+    for (int column = 0; column < grid.column_count - 1; ++column) {
+      const ScalarVertex top_left = {grid.PointAt(column, row),
+                                     grid.ValueAt(column, row)};
+      const ScalarVertex top_right = {grid.PointAt(column + 1, row),
+                                      grid.ValueAt(column + 1, row)};
+      const ScalarVertex bottom_right = {grid.PointAt(column + 1, row + 1),
+                                         grid.ValueAt(column + 1, row + 1)};
+      const ScalarVertex bottom_left = {grid.PointAt(column, row + 1),
+                                        grid.ValueAt(column, row + 1)};
+      const std::array<std::array<ScalarVertex, 3>, 2> triangles = {{
+          {top_left, top_right, bottom_right},
+          {top_left, bottom_right, bottom_left},
+      }};
+      for (const auto &triangle : triangles) {
+        std::vector<ScalarVertex> polygon(triangle.begin(), triangle.end());
+        if (lower_threshold.has_value()) {
+          polygon = ClipAboveThreshold(polygon, *lower_threshold);
+        }
+        if (upper_threshold.has_value()) {
+          polygon = ClipBelowThreshold(polygon, *upper_threshold);
+        }
+        AppendPolygonBoundary(polygon, &boundary_edges);
+      }
+    }
+  }
+
+  SkPathBuilder region;
+  region.setFillType(SkPathFillType::kWinding);
+  for (const std::vector<SkPoint> &contour :
+       BuildBoundaryContours(boundary_edges)) {
+    if (contour.size() < 3U) {
+      continue;
+    }
+    region.moveTo(contour.front());
+    for (std::size_t index = 1; index < contour.size(); ++index) {
+      region.lineTo(contour[index]);
+    }
+    region.close();
+  }
+  return region.detach();
+}
+
 bool InputsAreValid(std::span<const float> levels, float spline_tension) {
   if (!std::isfinite(spline_tension)) {
     return false;
@@ -258,8 +340,10 @@ bool InputsAreValid(std::span<const float> levels, float spline_tension) {
 
 } // namespace
 
-ContourRegionSet::ContourRegionSet(std::vector<SkPath> inclusive_regions)
-    : inclusive_regions_(std::move(inclusive_regions)) {}
+ContourRegionSet::ContourRegionSet(std::vector<SkPath> inclusive_regions,
+                                   std::vector<SkPath> exclusive_regions)
+    : inclusive_regions_(std::move(inclusive_regions)),
+      exclusive_regions_(std::move(exclusive_regions)) {}
 
 const SkPath *ContourRegionSet::InclusiveRegion(std::size_t index) const {
   return index < inclusive_regions_.size() ? &inclusive_regions_[index]
@@ -268,14 +352,10 @@ const SkPath *ContourRegionSet::InclusiveRegion(std::size_t index) const {
 
 std::optional<SkPath>
 ContourRegionSet::ExclusiveRegion(std::size_t index) const {
-  if (index >= inclusive_regions_.size()) {
+  if (index >= exclusive_regions_.size()) {
     return std::nullopt;
   }
-  if (index == 0U) {
-    return inclusive_regions_.front();
-  }
-  return Op(inclusive_regions_[index], inclusive_regions_[index - 1U],
-            kDifference_SkPathOp);
+  return exclusive_regions_[index];
 }
 
 std::optional<SkPath> ContourRegionSet::Region(std::size_t index,
@@ -306,7 +386,25 @@ BuildInclusiveContourRegions(const ScalarGrid &grid,
   SkPathBuilder full_field;
   full_field.addRect(grid.bounds);
   regions.push_back(full_field.detach());
-  return ContourRegionSet(std::move(regions));
+
+  std::vector<SkPath> exclusive_regions;
+  exclusive_regions.reserve(ascending_levels.size() + 1U);
+  for (std::size_t index = 0; index <= ascending_levels.size(); ++index) {
+    const std::optional<float> lower_threshold =
+        index < ascending_levels.size()
+            ? std::optional<float>(
+                  ascending_levels[ascending_levels.size() - index - 1U])
+            : std::nullopt;
+    const std::optional<float> upper_threshold =
+        index == 0U
+            ? std::nullopt
+            : std::optional<float>(
+                  ascending_levels[ascending_levels.size() - index]);
+    exclusive_regions.push_back(
+        BuildExclusiveRegion(grid, lower_threshold, upper_threshold));
+  }
+  return ContourRegionSet(std::move(regions),
+                          std::move(exclusive_regions));
 }
 
 } // namespace geometry

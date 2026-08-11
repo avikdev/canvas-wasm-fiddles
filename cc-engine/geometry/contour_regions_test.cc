@@ -102,6 +102,28 @@ int main() {
   success &= Expect(!regions->ExclusiveRegion(3U).has_value(),
                     "Out-of-range region requests should fail safely.");
 
+  constexpr std::array<float, 2> kCloseLevels = {0.499F, 0.501F};
+  const std::optional<geometry::ContourRegionSet> close_regions =
+      geometry::BuildInclusiveContourRegions(HorizontalRamp(), kCloseLevels,
+                                             0.1F);
+  success &= Expect(close_regions.has_value(),
+                    "Close thresholds should produce contour regions.");
+  if (close_regions.has_value()) {
+    const std::optional<SkPath> close_high =
+        close_regions->ExclusiveRegion(0U);
+    const std::optional<SkPath> close_middle =
+        close_regions->ExclusiveRegion(1U);
+    const std::optional<SkPath> close_low =
+        close_regions->ExclusiveRegion(2U);
+    success &= Expect(close_high.has_value() && close_middle.has_value() &&
+                          close_low.has_value() &&
+                          close_middle->contains(50.0F, 50.0F) &&
+                          !close_high->contains(50.0F, 50.0F) &&
+                          !close_low->contains(50.0F, 50.0F),
+                      "A thin exclusive band should remain present without "
+                      "overlapping its neighbors.");
+  }
+
   constexpr std::array<float, 1> kHoleLevel = {0.5F};
   const std::optional<geometry::ContourRegionSet> regions_with_hole =
       geometry::BuildInclusiveContourRegions(FieldWithHole(), kHoleLevel, 0.1F);

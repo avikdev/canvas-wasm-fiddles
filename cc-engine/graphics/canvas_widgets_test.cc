@@ -30,5 +30,13 @@ int main() {
   assert(Near(positive.marker_x, 110.0F));
   assert(Near(positive.positive_fill.left(), 60.0F));
   assert(Near(positive.positive_fill.right(), 110.0F));
+
+  const SkRect half =
+      graphics::canvas_widgets::MakeOneSidedSliderFill(track, 0.5F);
+  assert(Near(half.left(), 10.0F));
+  assert(Near(half.right(), 60.0F));
+  const SkRect clamped =
+      graphics::canvas_widgets::MakeOneSidedSliderFill(track, 2.0F);
+  assert(Near(clamped.right(), 110.0F));
   return 0;
 }
