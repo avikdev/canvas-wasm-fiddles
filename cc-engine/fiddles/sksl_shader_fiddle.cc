@@ -27,7 +27,6 @@
 
 namespace {
 
-const char kImgUrl[] = "/images/demoimage-01.jpg";
 constexpr double kPermutationSeconds = 0.5;
 constexpr SkColor kBackgroundColor = SkColorSetRGB(165, 56, 96);
 
@@ -73,6 +72,25 @@ SkslShaderFiddle::SkslShaderFiddle() = default;
 
 SkslShaderFiddle::~SkslShaderFiddle() = default;
 
+std::vector<FiddleWidget> SkslShaderFiddle::Widgets() const {
+  return {{"image", "Input image", "image", image_id_}};
+}
+
+bool SkslShaderFiddle::SetInput(const std::string &name,
+                                const std::string &value) {
+  if (name != "image") {
+    return false;
+  }
+  sk_sp<SkImage> image = SkiaImageStore::Instance().ImageForId(value);
+  if (image == nullptr) {
+    return false;
+  }
+  image_id_ = value;
+  image_ = std::move(image);
+  channel_shaders_.fill(nullptr);
+  return BuildChannelShaders();
+}
+
 bool SkslShaderFiddle::EnsureResources() {
   if (webgl_ != nullptr && image_ != nullptr &&
       channel_shaders_[0] != nullptr) {
@@ -83,11 +101,11 @@ bool SkslShaderFiddle::EnsureResources() {
   }
   initialization_attempted_ = true;
 
-  image_ = SkiaImageStore::Instance().ImageForId(kImgUrl);
+  image_ = SkiaImageStore::Instance().ImageForId(image_id_);
   if (image_ == nullptr) {
     std::cerr << "[cc-engine/stderr] SkSL shader requires worker "
                  "image id \""
-              << kImgUrl << "\"." << std::endl;
+              << image_id_ << "\"." << std::endl;
     return false;
   }
 

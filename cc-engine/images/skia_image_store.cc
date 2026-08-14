@@ -3,41 +3,32 @@
 #include <iostream>
 #include <utility>
 
-#include "include/codec/SkCodec.h"
-#include "include/codec/SkJpegDecoder.h"
-#include "include/core/SkData.h"
 #include "include/core/SkImage.h"
+#include "include/core/SkImageInfo.h"
+#include "include/core/SkPixmap.h"
 
 SkiaImageStore &SkiaImageStore::Instance() {
   static SkiaImageStore instance;
   return instance;
 }
 
-SkiaImageStore::SkiaImageStore() {
-  SkCodecs::Register(SkJpegDecoder::Decoder());
-}
-
-bool SkiaImageStore::RegisterEncodedImage(const std::string &image_id,
-                                          const std::uint8_t *bytes,
-                                          std::size_t byte_count) {
-  if (image_id.empty() || bytes == nullptr || byte_count == 0) {
+bool SkiaImageStore::RegisterRgbaImage(const std::string &image_id,
+                                       const std::uint8_t *pixels, int width,
+                                       int height) {
+  if (image_id.empty() || pixels == nullptr || width <= 0 || height <= 0) {
     return false;
   }
-
-  sk_sp<SkData> encoded = SkData::MakeWithCopy(bytes, byte_count);
-  sk_sp<SkImage> image = SkImages::DeferredFromEncodedData(std::move(encoded));
+  const SkImageInfo info = SkImageInfo::Make(
+      width, height, kRGBA_8888_SkColorType, kUnpremul_SkAlphaType);
+  const SkPixmap pixmap(info, pixels, info.minRowBytes());
+  sk_sp<SkImage> image = SkImages::RasterFromPixmapCopy(pixmap);
   if (image == nullptr) {
-    std::cerr << "[cc-engine/stderr] Skia could not decode image: " << image_id
-              << std::endl;
     return false;
   }
-
-  const int width = image->width();
-  const int height = image->height();
   images_.insert_or_assign(image_id, std::move(image));
-  std::cout << "[cc-engine/stdout] Registered image: id=" << image_id
-            << ", size=" << width << "x" << height
-            << ", encoded-bytes=" << byte_count << "." << std::endl;
+  std::cout << "[cc-engine/stdout] Registered browser-decoded image: id="
+            << image_id << ", size=" << width << "x" << height << "."
+            << std::endl;
   return true;
 }
 

@@ -32,16 +32,25 @@ SkPoint DeformPointWithNoise(const SkPoint &point, const SkRect &effect_box,
   const float local_x = (point.fX - effect_box.left()) / effect_box.width();
   const float local_y = (point.fY - effect_box.top()) / effect_box.height();
   const float z = parameters.time * 0.22F;
-  const float horizontal =
+  const float horizontal = std::clamp(
       noise::FractalPerlin3D(local_x * parameters.horizontal_frequency,
                              local_y * parameters.vertical_frequency, z, 3,
-                             2.0F, 0.52F, parameters.seed);
-  const float vertical = noise::FractalPerlin3D(
-      local_x * (parameters.horizontal_frequency * 0.72F),
-      local_y * (parameters.vertical_frequency * 0.82F), z + 13.7F, 2, 2.1F,
-      0.48F, parameters.seed ^ 0x9e3779b9U);
-  return {point.fX + horizontal * parameters.horizontal_amplitude,
-          point.fY + vertical * parameters.vertical_amplitude};
+                             2.0F, 0.52F, parameters.seed),
+      -1.0F, 1.0F);
+  const float vertical =
+      std::clamp(noise::FractalPerlin3D(
+                     local_x * (parameters.horizontal_frequency * 0.72F),
+                     local_y * (parameters.vertical_frequency * 0.82F),
+                     z + 13.7F, 2, 2.1F, 0.48F, parameters.seed ^ 0x9e3779b9U),
+                 -1.0F, 1.0F);
+  const float directional_displacement =
+      horizontal * parameters.horizontal_amplitude;
+  return {point.fX +
+              std::cos(parameters.direction_radians) * directional_displacement,
+          point.fY +
+              std::sin(parameters.direction_radians) *
+                  directional_displacement +
+              vertical * parameters.vertical_amplitude};
 }
 
 } // namespace geometry

@@ -47,9 +47,6 @@ using skia::textlayout::TextAlign;
 using skia::textlayout::TextDirection;
 using skia::textlayout::TextStyle;
 
-constexpr std::array<const char *, 7> kWords = {
-    "PHOENIX", "PEGASUS", "SPHINX", "DRAGON", "CHIMERA", "HYDRA", "MANTICORE",
-};
 constexpr int kEnvelopeKindCount = 12;
 constexpr int kDesktopColumnCount = 4;
 constexpr int kCompactColumnCount = 3;
@@ -764,6 +761,37 @@ EnvelopeDistortFiddle::EnvelopeDistortFiddle()
 
 EnvelopeDistortFiddle::~EnvelopeDistortFiddle() = default;
 
+std::vector<FiddleWidget> EnvelopeDistortFiddle::Widgets() const {
+  std::string value;
+  for (std::size_t index = 0; index < words_.size(); ++index) {
+    if (index > 0) value += ", ";
+    value += words_[index];
+  }
+  return {{"words", "Words (comma separated)", "text", value}};
+}
+
+bool EnvelopeDistortFiddle::SetInput(const std::string &name,
+                                     const std::string &value) {
+  if (name != "words") return false;
+  std::vector<std::string> words;
+  std::size_t start = 0;
+  while (start <= value.size()) {
+    const std::size_t end = value.find(',', start);
+    std::string word = value.substr(start, end - start);
+    const std::size_t first = word.find_first_not_of(" \t\r\n");
+    const std::size_t last = word.find_last_not_of(" \t\r\n");
+    if (first != std::string::npos) {
+      words.push_back(word.substr(first, last - first + 1));
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  if (words.empty()) return false;
+  words_ = std::move(words);
+  text_shapes_ready_ = font_collection_ != nullptr && BuildTextShapes();
+  return font_collection_ == nullptr || text_shapes_ready_;
+}
+
 bool EnvelopeDistortFiddle::EnsureResources() {
   if (webgl_ != nullptr && text_shapes_ready_ && label_typeface_ != nullptr) {
     return true;
@@ -806,11 +834,16 @@ bool EnvelopeDistortFiddle::BuildTextShapes() {
     return false;
   }
 
+  for (auto &font_shapes : text_shapes_) {
+    font_shapes.clear();
+    font_shapes.resize(words_.size());
+  }
+
   for (std::size_t font_index = 0; font_index < text::kFontChoices.size();
        ++font_index) {
     const std::string family_name =
         text::ResolveFontFamily(text::kFontChoices[font_index]);
-    for (std::size_t word_index = 0; word_index < kWords.size(); ++word_index) {
+    for (std::size_t word_index = 0; word_index < words_.size(); ++word_index) {
       TextStyle text_style;
       if (family_name.empty()) {
         text_style.setFontFamilies({});
@@ -833,7 +866,8 @@ bool EnvelopeDistortFiddle::BuildTextShapes() {
         return false;
       }
       paragraph_builder->pushStyle(text_style);
-      paragraph_builder->addText(kWords[word_index]);
+      paragraph_builder->addText(words_[word_index].data(),
+                                 words_[word_index].size());
       paragraph_builder->pop();
       std::unique_ptr<Paragraph> paragraph = paragraph_builder->Build();
       if (paragraph == nullptr) {
@@ -867,13 +901,13 @@ bool EnvelopeDistortFiddle::BuildTextShapes() {
                                &text_shapes_[font_index][word_index])) {
         std::cerr << "[cc-engine/stderr] Envelope Distort could not prepare "
                   << text::kFontChoices[font_index].display_name << " / "
-                  << kWords[word_index] << "." << std::endl;
+                  << words_[word_index] << "." << std::endl;
         return false;
       }
     }
   }
   std::cout << "[cc-engine/stdout] Envelope Distort prepared "
-            << text::kFontChoices.size() * kWords.size()
+            << text::kFontChoices.size() * words_.size()
             << " dense word/font outline sets." << std::endl;
   return true;
 }
@@ -1047,7 +1081,7 @@ void EnvelopeDistortFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
           SampleSurfaceAxis(surface, 2.0F / 3.0F, false),
       };
       const int word_index =
-          (cell_index + word_frame) % static_cast<int>(kWords.size());
+          (cell_index + word_frame) % static_cast<int>(words_.size());
       SkPath warped_text =
           WarpText(text_shapes_[font_index][word_index], surface);
 

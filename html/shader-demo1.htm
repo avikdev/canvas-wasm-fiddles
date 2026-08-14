@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluted Glass Shader</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    canvas { display: block; max-width: 100vw; max-height: 100vh; }
+  </style>
+</head>
+<body>
+
+<canvas id="outputCanvas" width="800" height="800"></canvas>
+
+<script>
+  const canvas = document.getElementById('outputCanvas');
+  const gl = canvas.getContext('webgl');
+
+  if (!gl) {
+    alert('WebGL not supported');
+  }
+
+  // --- 1. Source Texture Generation (OffscreenCanvas) ---
+  const width = canvas.width;
+  const height = canvas.height;
+  const offscreen = new OffscreenCanvas(width, height);
+  const ctx = offscreen.getContext('2d');
+
+  function drawBlobs(time) {
+    ctx.fillStyle = '#05020a';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.filter = 'blur(70px)';
+
+    const blobs = [
+      { x: width * 0.35 + Math.sin(time * 0.8) * 80, y: height * 0.45 + Math.cos(time * 0.6) * 40, r: 160, color: '#ff3a00' },
+      { x: width * 0.65 + Math.cos(time * 0.7) * 70, y: height * 0.35 + Math.sin(time * 0.9) * 50, r: 180, color: '#ff007f' },
+      { x: width * 0.5 + Math.sin(time * 0.5) * 60, y: height * 0.55 + Math.sin(time * 0.4) * 60, r: 170, color: '#ffaa00' },
+      { x: width * 0.8, y: height * 0.3 + Math.sin(time) * 30, r: 140, color: '#2255ff' }
+    ];
+
+    blobs.forEach(b => {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+    });
+  }
+
+  // --- 2. GLSL Shaders ---
+  const vsSource = `
+    attribute vec2 aPosition;
+    varying vec2 vUv;
+    void main() {
+      vUv = aPosition * 0.5 + 0.5;
+      gl_Position = vec4(aPosition, 0.0, 1.0);
+    }
+  `;
+
+  const fsSource = `
+    precision highp float;
+
+    varying vec2 vUv;
+    uniform sampler2D uTexture;
+
+    void main() {
+      vec2 uv = vUv;
+
+      // 1. Vertical Fluted Glass Panels
+      float numColumns = 36.0;
+      float columnUvX = fract(uv.x * numColumns);
+
+      // Curved lens refracts UV coordinates horizontally
+      float distortion = cos((columnUvX - 0.5) * 3.14159);
+      vec2 distortedUv = uv;
+      distortedUv.x += (columnUvX - 0.5) * 0.018 * distortion;
+
+      // 2. Vertical Smear / Blur Sampling Loop
+      vec4 color = vec4(0.0);
+      float samples = 14.0;
+      float blurLength = 0.09;
+
+      for (float i = 0.0; i < 14.0; i++) {
+        float offset = (i / samples - 0.5) * blurLength;
+        vec2 sampleUv = clamp(distortedUv + vec2(0.0, offset), 0.0, 1.0);
+        color += texture2D(uTexture, sampleUv);
+      }
+      color /= samples;
+
+      // Highlight seam edges between glass panels
+      float edgeHighlight = pow(1.0 - abs(columnUvX - 0.5) * 2.0, 6.0);
+      color.rgb += vec3(0.15) * edgeHighlight;
+
+      // 3. Ground Reflection
+      if (uv.y < 0.22) {
+        vec2 reflectUv = vec2(distortedUv.x, 0.44 - uv.y);
+        vec4 reflectColor = texture2D(uTexture, reflectUv);
+
+        float fade = smoothstep(0.02, 0.22, uv.y);
+        color = mix(reflectColor * 0.835, color, fade);
+      }
+
+      // Slightly boost contrast
+      color.rgb = pow(color.rgb, vec3(1.15));
+
+      gl_FragColor = color;
+    }
+  `;
+
+  // --- 3. WebGL Setup & Shader Compilation ---
+  function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+
+  const vertShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+  const fragShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+  const program = gl.createProgram();
+
+  gl.attachShader(program, vertShader);
+  gl.attachShader(program, fragShader);
+  gl.linkProgram(program);
+  gl.useProgram(program);
+
+  // Screen Quad Geometry
+  const positions = new Float32Array([
+    -1, -1,  1, -1, -1,  1,
+    -1,  1,  1, -1,  1,  1,
+  ]);
+
+  const positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+  const aPosition = gl.getAttribLocation(program, 'aPosition');
+  gl.enableVertexAttribArray(aPosition);
+  gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+
+  // WebGL Texture Setup
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+  // --- 4. Render Loop ---
+  function render(now) {
+    const time = now * 0.001;
+
+    // Draw frame on offscreen canvas and upload as WebGL texture
+    drawBlobs(time);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreen);
+
+    // Draw full-screen quad
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    requestAnimationFrame(render);
+  }
+
+  requestAnimationFrame(render);
+</script>
+
+</body>
+</html>

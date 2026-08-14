@@ -1,14 +1,16 @@
 <script lang="ts">
+import type { FiddleControlDefinition } from "@canvas-wasm-fiddles/canvas-worker";
 import { ArrowUpRight, Braces, Menu, Pause, Play, Save, Sparkles } from "lucide-svelte";
 import { onMount } from "svelte";
 import CanvasStage from "./lib/CanvasStage.svelte";
+import { ControlPanel } from "./lib/components/controls";
 import { Button } from "./lib/components/ui/button";
 import { Separator } from "./lib/components/ui/separator";
 import { fiddles, type FiddleId } from "./lib/fiddles";
 import { downloadSvg } from "./lib/svg-download";
 
-let selectedId = $state<FiddleId>("text-reflow");
-let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId) ?? fiddles[0]);
+let selectedId = $state<FiddleId | undefined>();
+let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId));
 let compactNavigation = $state<boolean>(
   typeof window === "undefined" ? false : window.matchMedia("(max-width: 760px)").matches,
 );
@@ -17,19 +19,26 @@ let navOpen = $state(!compactNavigation);
 let animationPaused = $state(false);
 let svgWritable = $state(false);
 let svgSaving = $state(false);
-let canvasStage: { exportSvg(): Promise<Blob> } | undefined = $state();
+let controls = $state<FiddleControlDefinition[]>([]);
+let canvasStage:
+  | {
+      exportSvg(): Promise<Blob>;
+      setInput(key: string, value: string | number | File): Promise<void>;
+    }
+  | undefined = $state();
 
 function selectFiddle(id: FiddleId) {
   selectedId = id;
   animationPaused = false;
   svgWritable = false;
+  controls = [];
   if (compactNavigation) {
     navOpen = false;
   }
 }
 
 async function saveSvg() {
-  if (!canvasStage || !animationPaused || !svgWritable || svgSaving) return;
+  if (!selected || !canvasStage || !animationPaused || !svgWritable || svgSaving) return;
 
   const filename = `${selected.id}-${Math.floor(Date.now() / 1000)}.svg`;
   svgSaving = true;
@@ -57,7 +66,7 @@ onMount(() => {
 </script>
 
 <svelte:head>
-  <title>{selected.title} · Canvas Wasm Fiddles</title>
+  <title>{selected ? `${selected.title} · ` : ""}Canvas Wasm Fiddles</title>
 </svelte:head>
 
 <div class="app-shell">
@@ -142,65 +151,72 @@ onMount(() => {
     ></button>
 
     <main class="main-panel">
-      <header class="fiddle-header">
-        <h2>{selected.title}</h2>
-        <div class="header-actions">
-          <button
-            type="button"
-            class="animation-toggle"
-            aria-label={animationPaused ? "Play animation" : "Pause animation"}
-            aria-pressed={animationPaused}
-            title={animationPaused ? "Play animation" : "Pause animation"}
-            onclick={() => (animationPaused = !animationPaused)}
-          >
-            {#if animationPaused}
-              <Play size={17} fill="currentColor" />
-            {:else}
-              <Pause size={17} fill="currentColor" />
-            {/if}
-          </button>
-          <button
-            type="button"
-            class="svg-save-button"
-            class:unsupported-svg={!svgWritable}
-            disabled={!svgWritable || !animationPaused || svgSaving}
-            aria-label="Save current frame as SVG"
-            title={svgWritable
-              ? animationPaused
-                ? "Save current frame as SVG"
-                : "Pause the animation to save an SVG"
-              : "This fiddle cannot be saved as SVG"}
-            onclick={saveSvg}
-          >
-            <Save size={15} />
-            <span>{svgSaving ? "Saving…" : "Save SVG"}</span>
-          </button>
-          <div class:paused={animationPaused} class="render-chip">
-            <span></span>
-            {animationPaused ? "Paused" : "Worker rendering"}
+      <header class="fiddle-header" class:empty={!selected}>
+        {#if selected}
+          <div class="fiddle-title-row">
+            <h2>{selected.title}</h2>
+            <div class="fiddle-tags" aria-label="Fiddle tags">
+              {#each selected.tags as tag}
+                <span>{tag}</span>
+              {/each}
+            </div>
           </div>
-        </div>
+          <div class="header-actions">
+            <button
+              type="button"
+              class="animation-toggle"
+              aria-label={animationPaused ? "Play animation" : "Pause animation"}
+              aria-pressed={animationPaused}
+              title={animationPaused ? "Play animation" : "Pause animation"}
+              onclick={() => (animationPaused = !animationPaused)}
+            >
+              {#if animationPaused}
+                <Play size={17} fill="currentColor" />
+              {:else}
+                <Pause size={17} fill="currentColor" />
+              {/if}
+            </button>
+            <button
+              type="button"
+              class="svg-save-button"
+              class:unsupported-svg={!svgWritable}
+              disabled={!svgWritable || !animationPaused || svgSaving}
+              aria-label="Save current frame as SVG"
+              title={svgWritable
+                ? animationPaused
+                  ? "Save current frame as SVG"
+                  : "Pause the animation to save an SVG"
+                : "This fiddle cannot be saved as SVG"}
+              onclick={saveSvg}
+            >
+              <Save size={15} />
+              <span>{svgSaving ? "Saving…" : "Save SVG"}</span>
+            </button>
+            <div class:paused={animationPaused} class="render-chip">
+              <span></span>
+              {animationPaused ? "Paused" : "Worker rendering"}
+            </div>
+          </div>
+          <p class="fiddle-about"><strong>About:</strong> {selected.summary}</p>
+        {/if}
       </header>
 
       <section class="canvas-wrap" aria-live="polite">
-        {#key selected.id}
+        {#key selectedId ?? "blank"}
           <CanvasStage
             bind:this={canvasStage}
-            fiddle={selected.id}
+            fiddle={selectedId}
             paused={animationPaused}
             onSvgWritableChange={(writable) => (svgWritable = writable)}
+            onControlsChange={(nextControls) => (controls = nextControls)}
           />
         {/key}
       </section>
 
-      <footer class="fiddle-meta">
-        <p>{selected.summary}</p>
-        <div class="fiddle-tags" aria-label="Fiddle tags">
-          {#each selected.tags as tag}
-            <span>{tag}</span>
-          {/each}
-        </div>
-      </footer>
+      <ControlPanel
+        {controls}
+        onInput={(key, value) => canvasStage?.setInput(key, value)}
+      />
     </main>
   </div>
 </div>

@@ -1,5 +1,9 @@
 <script lang="ts">
-import type { CanvasWorkerMessage, CanvasWorkerStatus } from "@canvas-wasm-fiddles/canvas-worker";
+import type {
+  CanvasWorkerMessage,
+  CanvasWorkerStatus,
+  FiddleControlDefinition,
+} from "@canvas-wasm-fiddles/canvas-worker";
 import CanvasWorker from "@canvas-wasm-fiddles/canvas-worker/worker?worker";
 import { onMount } from "svelte";
 import type { FiddleId } from "./fiddles";
@@ -8,15 +12,18 @@ let {
   fiddle,
   paused,
   onSvgWritableChange,
+  onControlsChange,
 }: {
-  fiddle: FiddleId;
+  fiddle?: FiddleId;
   paused: boolean;
   onSvgWritableChange?: (writable: boolean) => void;
+  onControlsChange?: (controls: FiddleControlDefinition[]) => void;
 } = $props();
 let canvasElement: HTMLCanvasElement;
 let stageElement: HTMLDivElement;
 let worker: Worker | undefined;
 let supported = $state(true);
+let loading = $state(true);
 let nextSvgRequestId = 1;
 const pendingSvgRequests = new Map<
   number,
@@ -38,13 +45,29 @@ export function exportSvg(): Promise<Blob> {
   });
 }
 
+export async function setInput(key: string, value: string | number | File) {
+  if (typeof value === "string" || typeof value === "number") {
+    send({ type: "input", key, value: String(value) });
+    return;
+  }
+  const bytes = await value.arrayBuffer();
+  const imageId = `user-image://${fiddle}/${key}/${Date.now()}/${value.name}`;
+  send({ type: "image-input", key, imageId, bytes }, [bytes]);
+}
+
 $effect(() => {
   send({ type: "animation", paused });
 });
 
 onMount(() => {
+  if (!fiddle) {
+    onSvgWritableChange?.(false);
+    return;
+  }
+
   if (!canvasElement.transferControlToOffscreen) {
     supported = false;
+    loading = false;
     return;
   }
 
@@ -53,7 +76,11 @@ onMount(() => {
     if (event.data.type === "error") {
       console.error(`[canvas-worker] ${event.data.message}`);
     } else if (event.data.type === "ready") {
-      console.info("[canvas-worker] C++ renderer ready.");
+      // Do nothing.
+    } else if (event.data.type === "first-frame") {
+      loading = false;
+    } else if (event.data.type === "controls") {
+      onControlsChange?.(event.data.controls);
     } else if (event.data.type === "svg-capability") {
       onSvgWritableChange?.(event.data.writable);
     } else if (event.data.type === "svg-export") {
@@ -142,6 +169,7 @@ onMount(() => {
     }
     pendingSvgRequests.clear();
     onSvgWritableChange?.(false);
+    onControlsChange?.([]);
   };
 });
 </script>
@@ -151,7 +179,23 @@ onMount(() => {
   class:shape-intersection-stage={fiddle === "shape-intersection"}
   bind:this={stageElement}
 >
-  <canvas bind:this={canvasElement} aria-label="Animated preview of the selected fiddle"></canvas>
+  <canvas
+    bind:this={canvasElement}
+    aria-label={fiddle ? "Animated preview of the selected fiddle" : "Blank fiddle"}
+  ></canvas>
+  {#if !fiddle || loading}
+    <div
+      class="blank-fiddle"
+      role="img"
+      aria-label={fiddle ? "Loading fiddle" : "No fiddle selected"}
+    >
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <rect x="3" y="3" width="94" height="94" rx="3" />
+        <circle cx="50" cy="50" r="26" />
+        <path d="M31.6 31.6 68.4 68.4" />
+      </svg>
+    </div>
+  {/if}
   {#if !supported}
     <div class="unsupported">
       This browser cannot hand a canvas to a Web Worker. Try the latest Chrome, Edge, or Firefox.

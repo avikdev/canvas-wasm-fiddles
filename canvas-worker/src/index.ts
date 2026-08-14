@@ -24,6 +24,17 @@ export type CanvasWorkerMessage =
       paused: boolean;
     }
   | {
+      type: "input";
+      key: string;
+      value: string;
+    }
+  | {
+      type: "image-input";
+      key: string;
+      imageId: string;
+      bytes: ArrayBuffer;
+    }
+  | {
       type: "export-svg";
       requestId: number;
     };
@@ -31,6 +42,13 @@ export type CanvasWorkerMessage =
 export type CanvasWorkerStatus =
   | {
       type: "ready";
+    }
+  | {
+      type: "first-frame";
+    }
+  | {
+      type: "controls";
+      controls: FiddleControlDefinition[];
     }
   | {
       type: "log";
@@ -50,3 +68,16 @@ export type CanvasWorkerStatus =
       blob?: Blob;
       error?: string;
     };
+
+export type FiddleControlType = "bool" | "option" | "range" | "text" | "para" | "image";
+
+export type FiddleControlDefinition = {
+  key: string;
+  title: string;
+  type: FiddleControlType;
+  defaultValue: string;
+  options: string[];
+  min: number;
+  max: number;
+  step: number;
+};

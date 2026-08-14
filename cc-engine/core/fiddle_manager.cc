@@ -156,6 +156,19 @@ bool FiddleManager::IsSvgWritable() const {
   return active_fiddle_ != nullptr && active_fiddle_->IsSvgWritable();
 }
 
+std::vector<FiddleWidget> FiddleManager::Widgets() const {
+  return active_fiddle_ == nullptr ? std::vector<FiddleWidget>{}
+                                   : active_fiddle_->Widgets();
+}
+
+bool FiddleManager::SetInput(const std::string &name,
+                             const std::string &value) {
+  if (active_fiddle_ == nullptr || !active_fiddle_->SetInput(name, value)) {
+    return false;
+  }
+  return true;
+}
+
 std::string FiddleManager::ExportSvg() {
   if (!IsSvgWritable()) {
     return {};

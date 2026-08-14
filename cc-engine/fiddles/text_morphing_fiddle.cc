@@ -230,6 +230,27 @@ TextMorphingFiddle::TextMorphingFiddle() {
 
 TextMorphingFiddle::~TextMorphingFiddle() = default;
 
+std::vector<FiddleWidget> TextMorphingFiddle::Widgets() const {
+  return {{"start", "Start letter", "text", std::string(1, source_letter_)},
+          {"end", "End letter", "text", std::string(1, target_letter_)}};
+}
+
+bool TextMorphingFiddle::SetInput(const std::string &name,
+                                  const std::string &value) {
+  if ((name != "start" && name != "end") || value.size() != 1) {
+    return false;
+  }
+  if (name == "start") {
+    source_letter_ = value.front();
+  } else {
+    target_letter_ = value.front();
+  }
+  cached_width_ = 0;
+  source_path_.reset();
+  target_path_.reset();
+  return true;
+}
+
 bool TextMorphingFiddle::EnsureResources() {
   if (webgl_ != nullptr && typeface_ != nullptr) {
     return true;

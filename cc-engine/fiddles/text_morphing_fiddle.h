@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "core/fiddle_base.h"
@@ -17,6 +18,8 @@ public:
   ~TextMorphingFiddle() override;
 
   bool IsSvgWritable() const override { return true; }
+  std::vector<FiddleWidget> Widgets() const override;
+  bool SetInput(const std::string &name, const std::string &value) override;
   void Render(double time_seconds) override;
 
 private:

@@ -310,6 +310,20 @@ TextTracingFiddle::TextTracingFiddle() = default;
 
 TextTracingFiddle::~TextTracingFiddle() = default;
 
+std::vector<FiddleWidget> TextTracingFiddle::Widgets() const {
+  return {{"letter", "Letter", "text", std::string(1, letter_)}};
+}
+
+bool TextTracingFiddle::SetInput(const std::string &name,
+                                 const std::string &value) {
+  if (name != "letter" || value.size() != 1) {
+    return false;
+  }
+  letter_ = value.front();
+  letter_path_.reset();
+  return true;
+}
+
 bool TextTracingFiddle::EnsureResources() {
   if (webgl_ != nullptr && typeface_ != nullptr) {
     return true;
@@ -347,7 +361,7 @@ bool TextTracingFiddle::EnsureResources() {
 
 bool TextTracingFiddle::RebuildLetterPath(float width, float height) {
   const SkFont source_font(typeface_, kGlyphSourceSize);
-  const SkGlyphID glyph = source_font.unicharToGlyph('B');
+  const SkGlyphID glyph = source_font.unicharToGlyph(letter_);
   const std::optional<SkPath> source_path = source_font.getPath(glyph);
   if (!source_path.has_value() || source_path->isEmpty()) {
     return false;

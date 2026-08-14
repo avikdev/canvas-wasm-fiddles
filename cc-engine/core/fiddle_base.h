@@ -4,12 +4,24 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 class SkCanvas;
 
 enum class FiddleBackend {
   kWebGl,
   kCpu,
+};
+
+struct FiddleWidget {
+  std::string key;
+  std::string title;
+  std::string type;
+  std::string default_value;
+  std::vector<std::string> options;
+  double minimum = 0.0;
+  double maximum = 100.0;
+  double step = 1.0;
 };
 
 // Platform-neutral canvas resources. Platform adapters fill these interfaces
@@ -58,6 +70,10 @@ public:
   std::string ExportSvg();
 
   virtual bool IsSvgWritable() const = 0;
+  virtual std::vector<FiddleWidget> Widgets() const { return {}; }
+  virtual bool SetInput(const std::string &key, const std::string &value) {
+    return false;
+  }
   virtual void Render(double time_seconds) = 0;
 
 protected:

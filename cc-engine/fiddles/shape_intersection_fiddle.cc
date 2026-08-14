@@ -4,8 +4,10 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <numbers>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -24,15 +26,10 @@
 #include "include/core/SkSurface.h"
 #include "include/pathops/SkPathOps.h"
 #include "text/skia_font_manager.h"
+#include "utils/weighted_picker.h"
 
 namespace {
 
-constexpr int kOctopusCount = 5;
-constexpr int kHoledPolygonCount = 4;
-constexpr int kPlusCount = 1;
-constexpr int kCircleCount = 3;
-constexpr int kBlobCount =
-    kOctopusCount + kHoledPolygonCount + kPlusCount + kCircleCount;
 constexpr int kPieceColorCount = 17;
 constexpr SkColor kCanvasColor = SkColorSetRGB(244, 232, 210);
 constexpr std::array<SkColor, kPieceColorCount> kPieceColors = {
@@ -48,6 +45,14 @@ struct BlobShape {
 struct Region {
   SkPath path;
   std::uint64_t id;
+};
+
+enum class ShapeType : std::size_t {
+  kTentacled,
+  kHoledPolygon,
+  kPlus,
+  kCircle,
+  kHatched,
 };
 
 std::uint32_t Hash(std::uint32_t value) {
@@ -315,6 +320,36 @@ SkPath GenerateCirclePath(float center_x, float center_y, float radius) {
   return builder.detach();
 }
 
+SkPath GenerateHatchedPath(float center_x, float center_y, float radius,
+                           float rotation, float stretch) {
+  SkPathBuilder builder;
+  constexpr int kStripeCount = 7;
+  const float half_length = radius * 1.55F;
+  const float stripe_width = radius * 0.18F;
+  for (int stripe = 0; stripe < kStripeCount; ++stripe) {
+    const float offset = std::lerp(-radius, radius,
+                                   static_cast<float>(stripe) /
+                                       static_cast<float>(kStripeCount - 1));
+    const std::array<SkPoint, 4> corners = {{
+        {-half_length, offset - stripe_width * 0.5F},
+        {half_length, offset - stripe_width * 0.5F},
+        {half_length, offset + stripe_width * 0.5F},
+        {-half_length, offset + stripe_width * 0.5F},
+    }};
+    for (std::size_t corner = 0; corner < corners.size(); ++corner) {
+      const SkPoint point =
+          TransformBlobPoint(corners[corner].fX, corners[corner].fY, center_x,
+                             center_y, rotation, stretch);
+      if (corner == 0)
+        builder.moveTo(point);
+      else
+        builder.lineTo(point);
+    }
+    builder.close();
+  }
+  return builder.detach();
+}
+
 BlobShape BuildBlob(int blob_index, double time_seconds, float width,
                     float height) {
   const float duration = 30.0F + static_cast<float>(blob_index % 4) * 3.5F;
@@ -373,27 +408,30 @@ BlobShape BuildBlob(int blob_index, double time_seconds, float width,
           2.0F +
       static_cast<float>(time_seconds) * rotation_speed * rotation_direction;
 
+  std::mt19937 shape_random(seed ^ 0xa511e9b3U);
+  const utils::WeightedPicker shape_picker({5.0, 4.0, 1.0, 3.0, 2.0});
+  const ShapeType shape_type =
+      static_cast<ShapeType>(shape_picker.PickOne(shape_random));
+
   SkPath path;
-  if (blob_index < kOctopusCount) {
+  if (shape_type == ShapeType::kTentacled) {
     path = GenerateTentacledBlobPath(center_x, center_y, base_radius, rotation,
                                      stretch, shape_time, seed);
-  } else if (blob_index < kOctopusCount + kHoledPolygonCount) {
-    constexpr std::array<int, kHoledPolygonCount> kPolygonSides = {3, 4, 5, 6};
-    const int polygon_index = blob_index - kOctopusCount;
+  } else if (shape_type == ShapeType::kHoledPolygon) {
+    const int polygon_sides = 3 + static_cast<int>(Hash(seed + 41U) % 4U);
     const float polygon_stretch =
-        polygon_index == 1 ? stretch * 1.55F : stretch;
-    path = GenerateHoledPolygonPath(kPolygonSides[polygon_index], center_x,
-                                    center_y, base_radius * 1.45F, rotation,
+        polygon_sides == 4 ? stretch * 1.55F : stretch;
+    path = GenerateHoledPolygonPath(polygon_sides, center_x, center_y,
+                                    base_radius * 1.45F, rotation,
                                     polygon_stretch);
-  } else if (blob_index < kOctopusCount + kHoledPolygonCount + kPlusCount) {
+  } else if (shape_type == ShapeType::kPlus) {
     path = GeneratePlusPath(center_x, center_y, base_radius * 1.20F, rotation,
                             stretch);
+  } else if (shape_type == ShapeType::kCircle) {
+    path = GenerateCirclePath(center_x, center_y, base_radius * 1.22F);
   } else {
-    const int circle_index =
-        blob_index - kOctopusCount - kHoledPolygonCount - kPlusCount;
-    const float circle_radius =
-        base_radius * (1.0F + static_cast<float>(circle_index) * 0.22F);
-    path = GenerateCirclePath(center_x, center_y, circle_radius);
+    path = GenerateHatchedPath(center_x, center_y, base_radius * 1.35F,
+                               rotation, stretch);
   }
 
   return {std::move(path), static_cast<std::uint64_t>(blob_index)};
@@ -407,9 +445,8 @@ bool IsVisibleOnCanvas(const SkPath &path, const SkRect &canvas_bounds) {
   return !path.isEmpty() && SkRect::Intersects(path.getBounds(), canvas_bounds);
 }
 
-std::vector<Region>
-BuildDisjointRegions(const std::array<BlobShape, kBlobCount> &blobs,
-                     const SkRect &canvas_bounds) {
+std::vector<Region> BuildDisjointRegions(const std::vector<BlobShape> &blobs,
+                                         const SkRect &canvas_bounds) {
   std::vector<Region> regions;
   for (const BlobShape &blob : blobs) {
     if (!IsVisibleOnCanvas(blob.path, canvas_bounds)) {
@@ -498,6 +535,42 @@ ShapeIntersectionFiddle::ShapeIntersectionFiddle() = default;
 
 ShapeIntersectionFiddle::~ShapeIntersectionFiddle() = default;
 
+std::vector<FiddleWidget> ShapeIntersectionFiddle::Widgets() const {
+  return {{"shapes-count",
+           "Number of shapes",
+           "range",
+           std::to_string(shapes_count_),
+           {},
+           5.0,
+           25.0,
+           1.0},
+          {"gap-thickness",
+           "Gap thickness",
+           "range",
+           std::to_string(gap_thickness_),
+           {},
+           0.0,
+           10.0,
+           0.1}};
+}
+
+bool ShapeIntersectionFiddle::SetInput(const std::string &key,
+                                       const std::string &value) {
+  char *end = nullptr;
+  const float parsed = std::strtof(value.c_str(), &end);
+  if (end == value.c_str() || *end != '\0')
+    return false;
+  if (key == "shapes-count") {
+    shapes_count_ = std::clamp(static_cast<int>(std::lround(parsed)), 5, 25);
+    return true;
+  }
+  if (key == "gap-thickness") {
+    gap_thickness_ = std::clamp(parsed, 0.0F, 6.0F);
+    return true;
+  }
+  return false;
+}
+
 bool ShapeIntersectionFiddle::EnsureWebGl() {
   if (webgl_ != nullptr) {
     return true;
@@ -556,10 +629,11 @@ bool ShapeIntersectionFiddle::UpdateState(double time_seconds, int, int) {
 
 void ShapeIntersectionFiddle::DrawFrame(SkCanvas *canvas, int width,
                                         int height) {
-  std::array<BlobShape, kBlobCount> blobs;
-  for (int index = 0; index < kBlobCount; ++index) {
-    blobs[index] = BuildBlob(index, time_seconds_, static_cast<float>(width),
-                             static_cast<float>(height));
+  std::vector<BlobShape> blobs;
+  blobs.reserve(static_cast<std::size_t>(shapes_count_));
+  for (int index = 0; index < shapes_count_; ++index) {
+    blobs.push_back(BuildBlob(index, time_seconds_, static_cast<float>(width),
+                              static_cast<float>(height)));
   }
   const SkRect canvas_bounds =
       SkRect::MakeWH(static_cast<float>(width), static_cast<float>(height));
@@ -573,7 +647,7 @@ void ShapeIntersectionFiddle::DrawFrame(SkCanvas *canvas, int width,
   SkPaint stroke;
   stroke.setAntiAlias(true);
   stroke.setStyle(SkPaint::kStroke_Style);
-  stroke.setStrokeWidth(2.0F);
+  stroke.setStrokeWidth(gap_thickness_);
   stroke.setStrokeCap(SkPaint::kRound_Cap);
   stroke.setStrokeJoin(SkPaint::kRound_Join);
   stroke.setColor(kCanvasColor);
@@ -584,8 +658,10 @@ void ShapeIntersectionFiddle::DrawFrame(SkCanvas *canvas, int width,
     fill.setColor4f(color, nullptr);
     canvas->drawPath(region.path, fill);
   }
-  for (const Region &region : regions) {
-    canvas->drawPath(region.path, stroke);
+  if (gap_thickness_ > 0.0F) {
+    for (const Region &region : regions) {
+      canvas->drawPath(region.path, stroke);
+    }
   }
   DrawPieceCountChip(canvas, static_cast<int>(regions.size()),
                      static_cast<float>(width), static_cast<float>(height),

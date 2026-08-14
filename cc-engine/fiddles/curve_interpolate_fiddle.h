@@ -17,6 +17,8 @@ public:
   ~CurveInterpolateFiddle() override;
 
   bool IsSvgWritable() const override { return true; }
+  std::vector<FiddleWidget> Widgets() const override;
+  bool SetInput(const std::string &key, const std::string &value) override;
   void Render(double time_seconds) override;
 
 private:
@@ -34,4 +36,5 @@ private:
   bool initialization_attempted_ = false;
   int cached_width_ = 0;
   int cached_height_ = 0;
+  float aspect_ = 2.0F;
 };

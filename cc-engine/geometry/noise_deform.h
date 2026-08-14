@@ -11,6 +11,7 @@ struct NoiseDeformParameters {
   float time = 0.0F;
   float horizontal_amplitude = 0.0F;
   float vertical_amplitude = 0.0F;
+  float direction_radians = 0.0F;
   float horizontal_frequency = 3.2F;
   float vertical_frequency = 15.0F;
   std::uint32_t seed = 0U;

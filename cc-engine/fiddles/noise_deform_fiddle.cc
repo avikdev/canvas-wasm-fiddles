@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
+#include <numbers>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -139,6 +141,42 @@ void DrawWaterField(SkCanvas *canvas, const SkRect &box, float time,
 NoiseDeformFiddle::NoiseDeformFiddle() = default;
 NoiseDeformFiddle::~NoiseDeformFiddle() = default;
 
+std::vector<FiddleWidget> NoiseDeformFiddle::Widgets() const {
+  return {{"intensity",
+           "Distortion intensity",
+           "range",
+           std::to_string(intensity_),
+           {},
+           0.0,
+           1.0,
+           0.1},
+          {"rotation",
+           "Rotation (degrees)",
+           "range",
+           std::to_string(rotation_degrees_),
+           {},
+           0.0,
+           90.0,
+           1.0}};
+}
+
+bool NoiseDeformFiddle::SetInput(const std::string &name,
+                                 const std::string &value) {
+  char *end = nullptr;
+  const float parsed = std::strtof(value.c_str(), &end);
+  if (end == value.c_str() || *end != '\0')
+    return false;
+  if (name == "intensity") {
+    intensity_ = std::clamp(parsed, 0.0F, 1.0F);
+    return true;
+  }
+  if (name == "rotation") {
+    rotation_degrees_ = std::clamp(parsed, 0.0F, 90.0F);
+    return true;
+  }
+  return false;
+}
+
 bool NoiseDeformFiddle::EnsureResources() {
   if (webgl_ != nullptr && typeface_ != nullptr) {
     return true;
@@ -269,8 +307,10 @@ void NoiseDeformFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
 
   geometry::NoiseDeformParameters parameters;
   parameters.time = time;
-  parameters.horizontal_amplitude = width * 0.156F;
-  parameters.vertical_amplitude = height * 0.024F;
+  parameters.horizontal_amplitude = width * 0.156F * intensity_;
+  parameters.vertical_amplitude = 0.0F;
+  parameters.direction_radians =
+      rotation_degrees_ * std::numbers::pi_v<float> / 180.0F;
   parameters.seed = 0x4e4f4953U;
 
   SkPaint paint;

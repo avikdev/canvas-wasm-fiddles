@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <numbers>
 #include <random>
@@ -36,8 +37,8 @@ namespace {
 
 using skia::textlayout::ParagraphBuilder;
 using skia::textlayout::ParagraphStyle;
+using skia::textlayout::StrutStyle;
 using skia::textlayout::TextAlign;
-using skia::textlayout::TextDecoration;
 using skia::textlayout::TextDirection;
 using skia::textlayout::TextStyle;
 
@@ -116,6 +117,62 @@ TextReflowFiddle::TextReflowFiddle()
           utils::CreateRandomGridTraversal(3, 3, CreateAlignmentSeed())) {}
 
 TextReflowFiddle::~TextReflowFiddle() = default;
+
+std::vector<FiddleWidget> TextReflowFiddle::Widgets() const {
+  return {
+      {"text", "Paragraph text", "para", text_},
+      {"height-multiplier",
+       "Relative line height",
+       "range",
+       "1",
+       {},
+       0.1,
+       2.5,
+       0.1},
+      {"letter-spacing",
+       "Letter Spacing (em)",
+       "range",
+       "0",
+       {},
+       -0.1,
+       0.25,
+       0.01},
+      {"word-spacing", "Word Spacing (em)", "range", "0", {}, -0.5, 1.0, 0.05},
+      {"baseline-shift",
+       "Baseline Shift (em)",
+       "range",
+       "0",
+       {},
+       -0.5,
+       0.5,
+       0.05}};
+}
+
+bool TextReflowFiddle::SetInput(const std::string &key,
+                                const std::string &value) {
+  if (key == "text") {
+    text_ = value;
+  } else {
+    char *end = nullptr;
+    const float parsed = std::strtof(value.c_str(), &end);
+    if (end == value.c_str() || *end != '\0')
+      return false;
+    if (key == "height-multiplier") {
+      height_multiplier_ = std::clamp(parsed, 0.1F, 2.5F);
+    } else if (key == "letter-spacing") {
+      letter_spacing_ = std::clamp(parsed, -0.1F, 0.25F);
+    } else if (key == "word-spacing") {
+      word_spacing_ = std::clamp(parsed, -0.5F, 1.0F);
+    } else if (key == "baseline-shift") {
+      baseline_shift_ = std::clamp(parsed, -0.5F, 0.5F);
+    } else {
+      return false;
+    }
+  }
+  paragraph_font_size_ = 0.0F;
+  paragraph_gradient_width_ = 0.0F;
+  return true;
+}
 
 bool TextReflowFiddle::EnsureResources() {
   if (webgl_ != nullptr && font_collection_ != nullptr &&
@@ -199,37 +256,18 @@ bool TextReflowFiddle::RebuildParagraphs(float font_size,
         style->setFontFamilies({SkString(family_name.c_str())});
       }
       style->setFontSize(font_size);
-      style->setHeight(1.18F);
+      style->setHeight(height_multiplier_);
       style->setHeightOverride(true);
+      style->setLetterSpacing(letter_spacing_ * font_size);
+      // SkParagraph consumes both values as absolute scalars. Store the UI
+      // values as em ratios so their effect follows the responsive font size.
+      style->setWordSpacing(word_spacing_ * font_size);
+      style->setBaselineShift(baseline_shift_ * font_size);
     };
 
     TextStyle body_style;
     configure_style(&body_style);
     body_style.setForegroundPaint(gradient_paint);
-
-    TextStyle warm_accent_style;
-    configure_style(&warm_accent_style);
-    constexpr SkColor kWarmAccent = SkColorSetRGB(165, 56, 96);
-    warm_accent_style.setColor(kWarmAccent);
-    warm_accent_style.setFontStyle(SkFontStyle::Bold());
-    warm_accent_style.setDecoration(TextDecoration::kUnderline);
-    warm_accent_style.setDecorationColor(kWarmAccent);
-
-    TextStyle teal_accent_style;
-    configure_style(&teal_accent_style);
-    constexpr SkColor kTealAccent = SkColorSetRGB(10, 147, 150);
-    teal_accent_style.setColor(kTealAccent);
-    teal_accent_style.setFontStyle(SkFontStyle::Bold());
-    teal_accent_style.setDecoration(TextDecoration::kUnderline);
-    teal_accent_style.setDecorationColor(kTealAccent);
-
-    TextStyle green_accent_style;
-    configure_style(&green_accent_style);
-    constexpr SkColor kGreenAccent = SkColorSetRGB(82, 121, 111);
-    green_accent_style.setColor(kGreenAccent);
-    green_accent_style.setFontStyle(SkFontStyle::Bold());
-    green_accent_style.setDecoration(TextDecoration::kUnderline);
-    green_accent_style.setDecorationColor(kGreenAccent);
 
     for (int alignment_index = 0; alignment_index < kAlignmentCount;
          ++alignment_index) {
@@ -237,6 +275,23 @@ bool TextReflowFiddle::RebuildParagraphs(float font_size,
       paragraph_style.setTextDirection(TextDirection::kLtr);
       paragraph_style.setTextAlign(kAlignments[alignment_index].horizontal);
       paragraph_style.setFakeMissingFontStyles(true);
+
+      // A uniform baseline shift otherwise participates in the run's own line
+      // metrics, which makes the baseline move with the glyphs and masks the
+      // visual shift. A forced strut supplies stable line metrics while the
+      // TextStyle baseline shift is applied to glyph placement.
+      StrutStyle strut_style;
+      if (family_name.empty()) {
+        strut_style.setFontFamilies({});
+      } else {
+        strut_style.setFontFamilies({SkString(family_name.c_str())});
+      }
+      strut_style.setFontSize(font_size);
+      strut_style.setHeight(height_multiplier_);
+      strut_style.setHeightOverride(true);
+      strut_style.setStrutEnabled(true);
+      strut_style.setForceStrutHeight(true);
+      paragraph_style.setStrutStyle(std::move(strut_style));
 
       auto builder =
           ParagraphBuilder::make(paragraph_style, font_collection_, unicode);
@@ -248,19 +303,7 @@ bool TextReflowFiddle::RebuildParagraphs(float font_size,
       }
 
       builder->pushStyle(body_style);
-      builder->addText("\"Ideas do not always ask for more ");
-      builder->pushStyle(warm_accent_style);
-      builder->addText("room");
-      builder->pop();
-      builder->addText(". They learn the ");
-      builder->pushStyle(teal_accent_style);
-      builder->addText("shape");
-      builder->pop();
-      builder->addText(" of the space, find a new ");
-      builder->pushStyle(green_accent_style);
-      builder->addText("line");
-      builder->pop();
-      builder->addText(", and keep their meaning as the edges move.\"");
+      builder->addText(text_.data(), text_.size());
       builder->pop();
 
       paragraphs_[font_index][alignment_index] = builder->Build();

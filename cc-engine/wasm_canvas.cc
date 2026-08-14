@@ -227,6 +227,15 @@ bool WasmFiddleManager::IsSvgWritable() const {
   return manager_->IsSvgWritable();
 }
 
+std::vector<FiddleWidget> WasmFiddleManager::Widgets() const {
+  return manager_->Widgets();
+}
+
+bool WasmFiddleManager::SetInput(const std::string &name,
+                                 const std::string &value) {
+  return manager_->SetInput(name, value);
+}
+
 std::string WasmFiddleManager::ExportSvg() { return manager_->ExportSvg(); }
 
 void WasmFiddleManager::Resize(double width, double height,

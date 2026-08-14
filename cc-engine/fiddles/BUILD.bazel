@@ -188,6 +188,7 @@ cc_library(
         "//core:fiddle_base",
         "//graphics:webgl_canvas_context",
         "//text:skia_font_manager",
+        "//utils:weighted_picker",
         "@skia//:core",
         "@skia//:pathops",
     ],

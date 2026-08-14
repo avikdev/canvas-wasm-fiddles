@@ -12,6 +12,5 @@ cc_library(
     }),
     deps = [
         "@skia//:core",
-        "@skia//:jpeg_decode_codec",
     ],
 )

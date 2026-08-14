@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "core/fiddle_base.h"
 #include "core/fiddle_registry.h"
@@ -14,6 +15,8 @@ public:
 
   bool SelectFiddle(const std::string &key);
   bool IsSvgWritable() const;
+  std::vector<FiddleWidget> Widgets() const;
+  bool SetInput(const std::string &name, const std::string &value);
   std::string ExportSvg();
   void Resize(double width, double height, double device_pixel_ratio);
   void Tick(double delta_seconds);

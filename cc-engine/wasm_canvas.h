@@ -2,10 +2,12 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <emscripten/val.h>
 
 class FiddleManager;
+struct FiddleWidget;
 
 // Emscripten-facing wrapper around the platform-neutral fiddle manager. This
 // is deliberately kept at the executable boundary so fiddle code can compile
@@ -20,6 +22,8 @@ public:
 
   bool SelectFiddle(const std::string &key);
   bool IsSvgWritable() const;
+  std::vector<FiddleWidget> Widgets() const;
+  bool SetInput(const std::string &name, const std::string &value);
   std::string ExportSvg();
   void Resize(double width, double height, double device_pixel_ratio);
   void Tick(double delta_seconds);

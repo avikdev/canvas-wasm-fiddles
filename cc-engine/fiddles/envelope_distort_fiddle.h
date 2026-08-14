@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "core/fiddle_base.h"
@@ -39,6 +40,8 @@ public:
   ~EnvelopeDistortFiddle() override;
 
   bool IsSvgWritable() const override { return true; }
+  std::vector<FiddleWidget> Widgets() const override;
+  bool SetInput(const std::string &name, const std::string &value) override;
   void Render(double time_seconds) override;
 
 private:
@@ -51,8 +54,10 @@ private:
   std::unique_ptr<WebGlCanvasContext> webgl_;
   sk_sp<skia::textlayout::FontCollection> font_collection_;
   sk_sp<SkTypeface> label_typeface_;
-  std::array<std::array<EnvelopeTextShape, 7>, text::kFontChoices.size()>
+  std::array<std::vector<EnvelopeTextShape>, text::kFontChoices.size()>
       text_shapes_;
+  std::vector<std::string> words_ = {"HYDRA", "PEGASUS", "CHIMERA",
+                                     "PHOENIX", "MANTICORE", "DRAGON"};
   std::vector<EnvelopeDemoCell> cells_;
   std::uint32_t field_seed_ = 0U;
   float cell_width_ = 1.0F;

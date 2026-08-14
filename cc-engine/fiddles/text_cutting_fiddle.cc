@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -48,7 +49,6 @@ using skia::textlayout::TextStyle;
 
 constexpr int kDesktopRibbonCount = 16;
 constexpr int kPhoneRibbonCount = kDesktopRibbonCount / 2;
-constexpr int kLetterCount = 5;
 constexpr float kPhoneWidthThreshold = 600.0F;
 constexpr float kRibbonGap = 4.0F;
 constexpr float kHalfRibbonGap = kRibbonGap * 0.5F;
@@ -61,7 +61,6 @@ constexpr float kLetterSaturation = 1.0F;
 constexpr float kLetterValue = 0.96F;
 constexpr float kWaveSegmentWidth = 32.0F;
 constexpr double kFontCycleSeconds = 5.0;
-constexpr char kWord[] = "Hello";
 constexpr SkColor kCanvasColor = SK_ColorWHITE;
 
 struct WaveGeometry {
@@ -206,7 +205,7 @@ SkPath BuildRibbonPath(int ribbon, float width, float height,
   return builder.detach();
 }
 
-SkRect BoundsForPaths(const std::array<SkPath, kLetterCount> &paths) {
+SkRect BoundsForPaths(const std::vector<SkPath> &paths) {
   SkRect bounds = SkRect::MakeEmpty();
   for (const SkPath &path : paths) {
     if (!path.isEmpty()) {
@@ -214,10 +213,6 @@ SkRect BoundsForPaths(const std::array<SkPath, kLetterCount> &paths) {
     }
   }
   return bounds;
-}
-
-int LetterIndexForUtf8Offset(std::uint32_t offset) {
-  return std::clamp(static_cast<int>(offset), 0, kLetterCount - 1);
 }
 
 SkPath NormalizeFilledPath(const SkPath &path) {
@@ -257,15 +252,19 @@ std::optional<SkPath> RoundedPiece(const SkPath &path,
 }
 
 void AppendRoundedPiece(std::vector<ColoredPiece> *pieces, SkPath path,
-                        SkColor4f color, const SkPathEffect &effect) {
-  std::optional<SkPath> rounded = RoundedPiece(path, effect);
+                        SkColor4f color, const SkPathEffect *effect) {
+  if (effect == nullptr) {
+    if (IsRenderablePiece(path))
+      pieces->push_back({std::move(path), color});
+    return;
+  }
+  std::optional<SkPath> rounded = RoundedPiece(path, *effect);
   if (rounded.has_value()) {
     pieces->push_back({std::move(*rounded), color});
   }
 }
 
-template <std::size_t Size>
-SkPath UnionFilledPaths(const std::array<SkPath, Size> &paths) {
+SkPath UnionFilledPaths(const std::vector<SkPath> &paths) {
   SkPath united;
   bool has_path = false;
   for (const SkPath &path : paths) {
@@ -303,9 +302,53 @@ TextCuttingFiddle::TextCuttingFiddle() = default;
 
 TextCuttingFiddle::~TextCuttingFiddle() = default;
 
+std::vector<FiddleWidget> TextCuttingFiddle::Widgets() const {
+  return {{"word", "Word or phrase", "text", word_},
+          {"hide-waves", "Hide the wavy bands", "bool",
+           hide_waves_ ? "true" : "false"},
+          {"hide-letters", "Hide the letter pieces", "bool",
+           hide_letters_ ? "true" : "false"},
+          {"roundedness",
+           "Piece roundedness",
+           "range",
+           std::to_string(piece_corner_radius_),
+           {},
+           0.0,
+           kPieceCornerRadius * 2.0,
+           0.25}};
+}
+
+bool TextCuttingFiddle::SetInput(const std::string &name,
+                                 const std::string &value) {
+  if (name == "hide-waves") {
+    hide_waves_ = value == "true";
+    return true;
+  }
+  if (name == "hide-letters") {
+    hide_letters_ = value == "true";
+    return true;
+  }
+  if (name == "roundedness") {
+    char *end = nullptr;
+    const float parsed = std::strtof(value.c_str(), &end);
+    if (end == value.c_str() || *end != '\0')
+      return false;
+    piece_corner_radius_ = std::clamp(parsed, 0.0F, kPieceCornerRadius * 2.0F);
+    corner_path_effect_ = piece_corner_radius_ > 0.0F
+                              ? SkCornerPathEffect::Make(piece_corner_radius_)
+                              : nullptr;
+    return true;
+  }
+  if (name != "word" || value.empty() ||
+      value.find_first_of("\r\n") != std::string::npos)
+    return false;
+  word_ = value;
+  cached_font_index_ = -1;
+  return true;
+}
+
 bool TextCuttingFiddle::EnsureResources() {
-  if (webgl_ != nullptr && font_collection_ != nullptr &&
-      corner_path_effect_ != nullptr) {
+  if (webgl_ != nullptr && font_collection_ != nullptr) {
     return true;
   }
   if (initialization_attempted_) {
@@ -328,10 +371,7 @@ bool TextCuttingFiddle::EnsureResources() {
 
   font_collection_ = sk_make_sp<skia::textlayout::FontCollection>();
   font_collection_->setDefaultFontManager(font_manager, "Roboto");
-  corner_path_effect_ = SkCornerPathEffect::Make(kPieceCornerRadius);
-  if (corner_path_effect_ == nullptr) {
-    return false;
-  }
+  corner_path_effect_ = SkCornerPathEffect::Make(piece_corner_radius_);
   webgl_ = std::move(webgl);
   std::cout << "[cc-engine/stdout] Text Cutting Skia path, paragraph, and "
                "Path Ops resources ready."
@@ -372,16 +412,21 @@ bool TextCuttingFiddle::RebuildLetterPaths(int font_index, float width,
     return false;
   }
   builder->pushStyle(text_style);
-  builder->addText(kWord);
+  builder->addText(word_.data(), word_.size());
   builder->pop();
   std::unique_ptr<Paragraph> paragraph = builder->Build();
   if (paragraph == nullptr) {
     return false;
   }
-  paragraph->layout(nominal_font_size * 8.0F);
+  // Give shaping enough horizontal room to keep all accepted input on one
+  // line. The resulting glyph paths are scaled into the canvas below.
+  const float shaping_width =
+      nominal_font_size *
+      std::max(8.0F, static_cast<float>(word_.size()) * 2.0F);
+  paragraph->layout(shaping_width);
 
-  std::array<SkPathBuilder, kLetterCount> letter_builders;
-  paragraph->visit([&letter_builders](int, const Paragraph::VisitorInfo *info) {
+  std::vector<SkPath> raw_paths;
+  paragraph->visit([&raw_paths](int, const Paragraph::VisitorInfo *info) {
     if (info == nullptr) {
       return;
     }
@@ -391,23 +436,15 @@ bool TextCuttingFiddle::RebuildLetterPaths(int font_index, float width,
       if (!glyph_path.has_value() || glyph_path->isEmpty()) {
         continue;
       }
-      const int letter_index =
-          LetterIndexForUtf8Offset(info->utf8Starts[glyph]);
       const SkPoint position =
           SkPoint::Make(info->positions[glyph].x() + info->origin.x(),
                         info->positions[glyph].y() + info->origin.y());
       SkPath positioned_path;
       glyph_path->transform(SkMatrix::Translate(position.x(), position.y()),
                             &positioned_path);
-      letter_builders[letter_index].addPath(
-          NormalizeFilledPath(positioned_path));
+      raw_paths.push_back(NormalizeFilledPath(positioned_path));
     }
   });
-
-  std::array<SkPath, kLetterCount> raw_paths;
-  for (int letter = 0; letter < kLetterCount; ++letter) {
-    raw_paths[letter] = NormalizeFilledPath(letter_builders[letter].detach());
-  }
 
   const SkRect text_bounds = BoundsForPaths(raw_paths);
   if (text_bounds.isEmpty() || text_bounds.width() <= 0.0F ||
@@ -427,20 +464,25 @@ bool TextCuttingFiddle::RebuildLetterPaths(int font_index, float width,
   stroke_paint.setStrokeCap(SkPaint::kRound_Cap);
   stroke_paint.setStrokeJoin(SkPaint::kRound_Join);
 
-  for (int letter = 0; letter < kLetterCount; ++letter) {
+  letter_paths_.clear();
+  letter_stroke_paths_.clear();
+  letter_paths_.reserve(raw_paths.size());
+  letter_stroke_paths_.reserve(raw_paths.size());
+  for (SkPath &raw_path : raw_paths) {
     SkPath placed_path;
-    raw_paths[letter].transform(placement, &placed_path);
+    raw_path.transform(placement, &placed_path);
     placed_path = NormalizeFilledPath(placed_path);
-    letter_stroke_paths_[letter] = NormalizeFilledPath(
+    SkPath stroke_path = NormalizeFilledPath(
         skpathutils::FillPathWithPaint(placed_path, stroke_paint));
     const std::optional<SkPath> inset =
-        Op(placed_path, letter_stroke_paths_[letter], kDifference_SkPathOp);
+        Op(placed_path, stroke_path, kDifference_SkPathOp);
+    letter_stroke_paths_.push_back(std::move(stroke_path));
     if (!inset.has_value()) {
-      letter_paths_[letter] = std::move(placed_path);
+      letter_paths_.push_back(std::move(placed_path));
     } else if (IsRenderablePiece(*inset)) {
-      letter_paths_[letter] = NormalizeFilledPath(*inset);
+      letter_paths_.push_back(NormalizeFilledPath(*inset));
     } else {
-      letter_paths_[letter].reset();
+      letter_paths_.emplace_back();
     }
   }
   cached_font_index_ = font_index;
@@ -509,27 +551,30 @@ void TextCuttingFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
 
   canvas->clear(kCanvasColor);
   std::vector<ColoredPiece> pieces;
-  pieces.reserve(ribbon_count * (kLetterCount + 1));
+  pieces.reserve(static_cast<std::size_t>(ribbon_count) *
+                 (letter_paths_.size() + 1));
 
   for (int ribbon = 0; ribbon < ribbon_count; ++ribbon) {
     const SkColor4f ribbon_color =
         GeneratedColor(ribbon, ribbon_count, kRibbonSaturation, kRibbonValue);
     std::vector<ColoredPiece> ribbon_pieces;
-    ribbon_pieces.reserve(kLetterCount + 1);
+    ribbon_pieces.reserve(letter_paths_.size() + 1);
 
     const std::optional<SkPath> outside =
         Op(ribbons[ribbon], all_letters, kDifference_SkPathOp);
     if (!outside.has_value() || !IsRenderablePiece(*outside)) {
-      if (IsRenderablePiece(ribbons[ribbon])) {
+      if (!hide_waves_ && IsRenderablePiece(ribbons[ribbon])) {
         AppendRoundedPiece(&pieces, ribbons[ribbon], ribbon_color,
-                           *corner_path_effect_);
+                           corner_path_effect_.get());
       }
       continue;
     }
-    ribbon_pieces.push_back({std::move(*outside), ribbon_color});
+    if (!hide_waves_) {
+      ribbon_pieces.push_back({std::move(*outside), ribbon_color});
+    }
 
     bool path_ops_failed = false;
-    for (int letter = 0; letter < kLetterCount; ++letter) {
+    for (std::size_t letter = 0; letter < letter_paths_.size(); ++letter) {
       if (letter_paths_[letter].isEmpty()) {
         continue;
       }
@@ -547,15 +592,19 @@ void TextCuttingFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
         continue;
       }
 
-      int color_index = letter % 2 == 0 ? ribbon + letter : ribbon - letter;
+      const int letter_index = static_cast<int>(letter);
+      int color_index =
+          letter_index % 2 == 0 ? ribbon + letter_index : ribbon - letter_index;
       color_index = (color_index % ribbon_count + ribbon_count) % ribbon_count;
       if (color_index == ribbon) {
         color_index = (ribbon + 1) % ribbon_count;
       }
-      ribbon_pieces.push_back(
-          {std::move(*overlap),
-           GeneratedColor(color_index, ribbon_count, kLetterSaturation,
-                          kLetterValue)});
+      if (!hide_letters_) {
+        ribbon_pieces.push_back(
+            {std::move(*overlap),
+             GeneratedColor(color_index, ribbon_count, kLetterSaturation,
+                            kLetterValue)});
+      }
     }
 
     if (path_ops_failed) {
@@ -564,13 +613,13 @@ void TextCuttingFiddle::DrawFrame(SkCanvas *canvas, int width, int height) {
       // successfully computed pieces from this global ribbon.
       for (ColoredPiece &piece : ribbon_pieces) {
         AppendRoundedPiece(&pieces, std::move(piece.path), piece.color,
-                           *corner_path_effect_);
+                           corner_path_effect_.get());
       }
       continue;
     }
     for (ColoredPiece &piece : ribbon_pieces) {
       AppendRoundedPiece(&pieces, std::move(piece.path), piece.color,
-                         *corner_path_effect_);
+                         corner_path_effect_.get());
     }
   }
 

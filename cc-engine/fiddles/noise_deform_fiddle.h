@@ -22,6 +22,8 @@ public:
   ~NoiseDeformFiddle() override;
 
   bool IsSvgWritable() const override { return true; }
+  std::vector<FiddleWidget> Widgets() const override;
+  bool SetInput(const std::string &name, const std::string &value) override;
   void Render(double time_seconds) override;
 
 private:
@@ -37,4 +39,6 @@ private:
   int cached_width_ = 0;
   int cached_height_ = 0;
   bool initialization_attempted_ = false;
+  float intensity_ = 1.0F;
+  float rotation_degrees_ = 0.0F;
 };

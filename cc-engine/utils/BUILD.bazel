@@ -54,3 +54,15 @@ cc_test(
     srcs = ["random_permutation_test.cc"],
     deps = [":random_permutation"],
 )
+
+cc_library(
+    name = "weighted_picker",
+    srcs = ["weighted_picker.cc"],
+    hdrs = ["weighted_picker.h"],
+)
+
+cc_test(
+    name = "weighted_picker_test",
+    srcs = ["weighted_picker_test.cc"],
+    deps = [":weighted_picker"],
+)

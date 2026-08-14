@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "core/fiddle_base.h"
@@ -21,6 +22,8 @@ public:
   ~TextReflowFiddle() override;
 
   bool IsSvgWritable() const override { return true; }
+  std::vector<FiddleWidget> Widgets() const override;
+  bool SetInput(const std::string &name, const std::string &value) override;
   void Render(double time_seconds) override;
 
 private:
@@ -39,7 +42,14 @@ private:
   bool initialization_attempted_ = false;
   float paragraph_font_size_ = 0.0F;
   float paragraph_gradient_width_ = 0.0F;
+  float height_multiplier_ = 1.0F;
+  float letter_spacing_ = 0.0F;
+  float word_spacing_ = 0.0F;
+  float baseline_shift_ = 0.0F;
   float current_width_ratio_ = 0.75F;
   int current_alignment_index_ = 0;
   int current_font_index_ = 0;
+  std::string text_ =
+      "Ideas do not always ask for more room. They learn the shape of the "
+      "space, find a new line, and keep their meaning as the edges move.";
 };

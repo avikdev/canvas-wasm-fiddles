@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include <numbers>
 #include <string_view>
@@ -60,6 +61,17 @@ Layout MakeLayout(int width, int height, float device_scale) {
           SkRect::MakeXYWH(padding, padding + input_height + gap,
                            width - 2.0F * padding, available - input_height),
   };
+}
+
+SkRect FitAspectInside(const SkRect &bounds, float aspect) {
+  float width = bounds.width();
+  float height = width / aspect;
+  if (height > bounds.height()) {
+    height = bounds.height();
+    width = height * aspect;
+  }
+  return SkRect::MakeXYWH(bounds.centerX() - width * 0.5F,
+                          bounds.centerY() - height * 0.5F, width, height);
 }
 
 float ResponsiveUiScale(int width, int height, float device_scale) {
@@ -250,6 +262,31 @@ void DrawWidthChart(SkCanvas *canvas, const SkRect &bounds,
 CurveInterpolateFiddle::CurveInterpolateFiddle() = default;
 CurveInterpolateFiddle::~CurveInterpolateFiddle() = default;
 
+std::vector<FiddleWidget> CurveInterpolateFiddle::Widgets() const {
+  return {{"aspect",
+           "Output Aspect-ratio",
+           "range",
+           std::to_string(aspect_),
+           {},
+           0.5,
+           4.0,
+           0.1}};
+}
+
+bool CurveInterpolateFiddle::SetInput(const std::string &key,
+                                      const std::string &value) {
+  if (key != "aspect")
+    return false;
+  char *end = nullptr;
+  const float parsed = std::strtof(value.c_str(), &end);
+  if (end == value.c_str() || *end != '\0')
+    return false;
+  aspect_ = std::clamp(parsed, 0.5F, 4.0F);
+  cached_width_ = 0;
+  cached_height_ = 0;
+  return true;
+}
+
 bool CurveInterpolateFiddle::EnsureResources() {
   if (webgl_ != nullptr && typeface_ != nullptr) {
     return true;
@@ -276,6 +313,7 @@ bool CurveInterpolateFiddle::EnsureResources() {
 bool CurveInterpolateFiddle::Rebuild(int width, int height) {
   const float device_scale = static_cast<float>(width / std::max(1.0, Width()));
   const Layout layout = MakeLayout(width, height, device_scale);
+  const SkRect output_graphic = FitAspectInside(layout.output, aspect_);
   source_curve_ = MakeSourceCurve();
   target_curve_ = MakeTargetCurve();
   source_curve_.transform(SkMatrix::Scale(0.85F, 0.85F));
@@ -285,10 +323,11 @@ bool CurveInterpolateFiddle::Rebuild(int width, int height) {
   source_curve_.transform(portrait_rotation);
   target_curve_.transform(portrait_rotation);
   const float guide_inset =
-      std::max(82.0F * device_scale, layout.output.width() * 0.09F);
+      std::min(output_graphic.width() * 0.42F,
+               std::max(24.0F * device_scale, output_graphic.width() * 0.09F));
   guide_path_ = MakeGuide(
-      layout.output.left() + guide_inset, layout.output.right() - guide_inset,
-      layout.output.centerY(), layout.output.height() * 0.82F);
+      output_graphic.left() + guide_inset, output_graphic.right() - guide_inset,
+      output_graphic.centerY(), output_graphic.height() * 0.82F);
   if (!interpolation_.Init(source_curve_, target_curve_, guide_path_,
                            WidthProfile)) {
     std::cerr << "[cc-engine/stderr] Curve Interpolate: "

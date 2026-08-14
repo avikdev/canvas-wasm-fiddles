@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <numbers>
 #include <optional>
@@ -40,7 +41,6 @@ constexpr float kShapePaddingRatio = 0.07F;
 constexpr float kCurveSampleSpacing = 2.25F;
 // Samples nearest the center rotate through three full turns. The smoothly
 // decreasing radial angle is what turns an intersecting edge into a spiral.
-constexpr float kMaximumTwistRadians = 3.0F * 2.0F * std::numbers::pi_v<float>;
 // The old straight-line velocity was hypot(0.42, 0.31) cells/second. Motion is
 // deliberately reduced to 70% of that speed before per-swirl variation.
 constexpr float kSwirlSpeedCellsPerSecond = 0.36541F;
@@ -377,7 +377,7 @@ float SmoothFalloff(float normalized_distance) {
 }
 
 SkPoint ApplySwirl(const SkPoint &point, const SkPoint &center, float radius,
-                   float twist_direction) {
+                   float twist_direction, float maximum_twist_radians) {
   const float delta_x = point.fX - center.fX;
   const float delta_y = point.fY - center.fY;
   const float distance = std::hypot(delta_x, delta_y);
@@ -385,7 +385,7 @@ SkPoint ApplySwirl(const SkPoint &point, const SkPoint &center, float radius,
     return point;
   }
   const float rotation =
-      twist_direction * kMaximumTwistRadians * SmoothFalloff(distance / radius);
+      twist_direction * maximum_twist_radians * SmoothFalloff(distance / radius);
   const float cosine = std::cos(rotation);
   const float sine = std::sin(rotation);
   return {
@@ -397,7 +397,7 @@ SkPoint ApplySwirl(const SkPoint &point, const SkPoint &center, float radius,
 SkPath
 DeformedIntersection(const SkPath &intersection,
                      const std::array<SwirlFrame, kSwirlCount> &swirl_frames,
-                     std::size_t active_swirl) {
+                     std::size_t active_swirl, float maximum_twist_radians) {
   SkPathBuilder result;
   result.setFillType(intersection.getFillType());
   for (const SwirlContourSamples &contour : SampleContours(intersection)) {
@@ -406,7 +406,8 @@ DeformedIntersection(const SkPath &intersection,
     for (const SkPoint &point : contour.points) {
       const SwirlFrame &swirl = swirl_frames[active_swirl];
       const SkPoint displaced_point =
-          ApplySwirl(point, swirl.center, swirl.radius, swirl.twist_direction);
+          ApplySwirl(point, swirl.center, swirl.radius, swirl.twist_direction,
+                     maximum_twist_radians);
       displaced.push_back(displaced_point);
     }
     geometry::CatmullRomOptions options;
@@ -424,6 +425,23 @@ DeformedIntersection(const SkPath &intersection,
 SwirlDeformFiddle::SwirlDeformFiddle() : field_seed_(std::random_device{}()) {}
 
 SwirlDeformFiddle::~SwirlDeformFiddle() = default;
+
+std::vector<FiddleWidget> SwirlDeformFiddle::Widgets() const {
+  return {{"rotation", "Maximum rotation", "range",
+           std::to_string(maximum_rotation_turns_), {}, 0.0, 3.0, 0.1}};
+}
+
+bool SwirlDeformFiddle::SetInput(const std::string &name,
+                                 const std::string &value) {
+  if (name != "rotation") return false;
+  char *end = nullptr;
+  const float parsed = std::strtof(value.c_str(), &end);
+  if (end == value.c_str() || *end != '\0') return false;
+  maximum_rotation_turns_ = std::clamp(parsed, 0.0F, 3.0F);
+  motion_initialized_ = false;
+  last_motion_time_seconds_ = -1.0;
+  return true;
+}
 
 bool SwirlDeformFiddle::EnsureResources() {
   if (webgl_ != nullptr) {
@@ -733,7 +751,9 @@ void SwirlDeformFiddle::DrawFrame(SkCanvas *canvas, int, int) {
       }
 
       const SkPath deformed =
-          DeformedIntersection(*intersection, swirl_frames, index);
+          DeformedIntersection(
+              *intersection, swirl_frames, index,
+              maximum_rotation_turns_ * 2.0F * std::numbers::pi_v<float>);
       composed.addPath(deformed.isEmpty() ? *intersection : deformed);
       remaining = *outside;
       split_shape = true;

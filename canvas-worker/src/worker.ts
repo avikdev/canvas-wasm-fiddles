@@ -1,10 +1,11 @@
 /// <reference lib="webworker" />
 
-import type { CanvasWorkerMessage } from "./index";
+import type { CanvasWorkerMessage, FiddleControlDefinition, FiddleControlType } from "./index";
 import { createSvgBlob } from "./svg-export";
-import CreateCanvasDemoModule, { type FiddleManager } from "./wasm/demo.js";
+import CreateCanvasDemoModule, { type CanvasDemoModule, type FiddleManager } from "./wasm/demo.js";
 
 let fiddleManager: FiddleManager | undefined;
+let wasmModule: CanvasDemoModule | undefined;
 let selectedFiddle = "text-reflow";
 let width = 1;
 let height = 1;
@@ -58,6 +59,53 @@ function reportSvgCapability() {
   });
 }
 
+function reportControls() {
+  if (!fiddleManager) {
+    self.postMessage({ type: "controls", controls: [] });
+    return;
+  }
+  const widgets = fiddleManager.widgets();
+  const controls: FiddleControlDefinition[] = [];
+  try {
+    for (let index = 0; index < widgets.size(); index += 1) {
+      const widget = widgets.get(index);
+      if (!widget) continue;
+      const options: string[] = [];
+      try {
+        for (let option = 0; option < widget.options.size(); option += 1) {
+          const value = widget.options.get(option);
+          if (value !== undefined) options.push(value);
+        }
+      } finally {
+        widget.options.delete();
+      }
+      const titledWidget = widget as typeof widget & { key: string; title: string };
+      controls.push({
+        key: titledWidget.key,
+        title: titledWidget.title,
+        type: widget.type as FiddleControlType,
+        defaultValue: widget.defaultValue,
+        options,
+        min: widget.min,
+        max: widget.max,
+        step: widget.step,
+      });
+    }
+  } finally {
+    widgets.delete();
+  }
+  self.postMessage({ type: "controls", controls });
+}
+
+function applyInput(key: string, value: string) {
+  if (!fiddleManager?.setInput(key, value)) {
+    reportError(new Error(`The fiddle rejected input "${key}".`));
+    return;
+  }
+  previousFrameTime = undefined;
+  fiddleManager.tick(0);
+}
+
 self.addEventListener("error", (event) => reportError(event.error ?? event.message));
 self.addEventListener("unhandledrejection", (event) => reportError(event.reason));
 
@@ -96,11 +144,16 @@ async function loadExternalImages(wasmModule: Awaited<ReturnType<typeof createWa
         if (!response.ok) {
           throw new Error(`${response.status} ${response.statusText}`);
         }
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (!wasmModule.loadImage(image.id, bytes)) {
-          throw new Error("Skia could not decode the image data.");
+        const blob = await response.blob();
+        const bitmap = await createImageBitmap(blob);
+        try {
+          if (!wasmModule.loadImageBitmap(image.id, bitmap)) {
+            throw new Error("Could not copy the browser-decoded image into Wasm.");
+          }
+        } finally {
+          bitmap.close();
         }
-        reportLog(`Loaded image ${image.label} (${bytes.byteLength} bytes).`);
+        reportLog(`Loaded image ${image.label} (${blob.size} bytes).`);
       } catch (error) {
         reportError(new Error(`Could not load ${image.label}: ${describeError(error)}`));
       }
@@ -116,6 +169,7 @@ function render(now: number) {
     fiddleManager?.tick(deltaSeconds);
     if (fiddleManager && !didReportFirstFrame) {
       didReportFirstFrame = true;
+      self.postMessage({ type: "first-frame" });
       reportLog("First animation frame rendered.");
     }
   } catch (error) {
@@ -138,13 +192,14 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     dpr = message.dpr;
     animationPaused = message.paused;
 
-    const wasmModule = await createWasmModule();
+    wasmModule = await createWasmModule();
     await Promise.all([loadExternalFonts(wasmModule), loadExternalImages(wasmModule)]);
     fiddleManager?.delete();
     fiddleManager = new wasmModule.FiddleManager(message.canvas, selectedFiddle);
     fiddleManager.resize(width, height, dpr);
     self.postMessage({ type: "ready" });
     reportSvgCapability();
+    reportControls();
 
     previousFrameTime = undefined;
     didReportFirstFrame = false;
@@ -179,11 +234,34 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
     return;
   }
 
+  if (message.type === "input") {
+    applyInput(message.key, message.value);
+    return;
+  }
+
+  if (message.type === "image-input") {
+    try {
+      const bitmap = await createImageBitmap(new Blob([message.bytes]));
+      try {
+        if (!wasmModule?.loadImageBitmap(message.imageId, bitmap)) {
+          throw new Error("Could not copy the browser-decoded image into Wasm.");
+        }
+      } finally {
+        bitmap.close();
+      }
+      applyInput(message.key, message.imageId);
+    } catch (error) {
+      reportError(new Error(`Could not decode the selected image: ${describeError(error)}`));
+    }
+    return;
+  }
+
   if (message.type === "select") {
     selectedFiddle = message.fiddle;
     const didSelect = fiddleManager?.selectFiddle(selectedFiddle);
     reportLog(`Selected ${selectedFiddle}: ${String(didSelect)}`);
     reportSvgCapability();
+    reportControls();
     return;
   }
 
