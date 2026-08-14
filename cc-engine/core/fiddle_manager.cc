@@ -18,6 +18,7 @@
 #include "fiddles/swirl_deform_fiddle.h"
 #include "fiddles/text_cutting_fiddle.h"
 #include "fiddles/text_morphing_fiddle.h"
+#include "fiddles/text_on_curve_fiddle.h"
 #include "fiddles/text_reflow_fiddle.h"
 #include "fiddles/text_tracing_fiddle.h"
 
@@ -49,6 +50,10 @@ std::unique_ptr<FiddleBase> CreateSceneBenchmarkCpu() {
 
 std::unique_ptr<FiddleBase> CreateTextReflow() {
   return std::make_unique<TextReflowFiddle>();
+}
+
+std::unique_ptr<FiddleBase> CreateTextOnCurve() {
+  return std::make_unique<TextOnCurveFiddle>();
 }
 
 std::unique_ptr<FiddleBase> CreateEnvelopeDistort() {
@@ -95,6 +100,7 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
     : canvas_resources_(canvas_resources), width_(std::max(1.0, initial_width)),
       height_(std::max(1.0, initial_height)) {
   registry_.Register("text-reflow", &CreateTextReflow);
+  registry_.Register("text-on-cirve", &CreateTextOnCurve);
   registry_.Register("text-cutting", &CreateTextCutting);
   registry_.Register("text-tracing", &CreateTextTracing);
   registry_.Register("text-morphing", &CreateTextMorphing);
@@ -112,7 +118,8 @@ FiddleManager::FiddleManager(FiddleCanvasResourceProvider &canvas_resources,
   registry_.Register("scene-benchmark-cpu", &CreateSceneBenchmarkCpu);
 
   std::cout << "[cc-engine/stdout] FiddleManager initialized with "
-            << "text-reflow, text-cutting, text-tracing, text-morphing, "
+            << "text-reflow, text-on-cirve, text-cutting, text-tracing, "
+               "text-morphing, "
                "curve-interpolate, env-distort, "
                "mesh-warp, swirl-deform, noise-deform, pucker-bloat, "
                "shape-intersection, "

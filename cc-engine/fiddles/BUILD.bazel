@@ -160,6 +160,25 @@ cc_library(
 )
 
 cc_library(
+    name = "text_on_curve_fiddle",
+    srcs = ["text_on_curve_fiddle.cc"],
+    hdrs = ["text_on_curve_fiddle.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//core:fiddle_base",
+        "//geometry:path_text_deformer",
+        "//graphics:webgl_canvas_context",
+        "//text:shaped_text_line",
+        "//text:skia_font_manager",
+        "@skia//:core",
+        "@skia//:skparagraph_harfbuzz_skunicode",
+    ],
+)
+
+cc_library(
     name = "sksl_shader_fiddle",
     srcs = ["sksl_shader_fiddle.cc"],
     hdrs = ["sksl_shader_fiddle.h"],

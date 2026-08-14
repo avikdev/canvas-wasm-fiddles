@@ -30,6 +30,16 @@ export const fiddles: readonly Fiddle[] = [
     tags: ["WebGL", "Skia Ganesh"],
   },
   {
+    id: "text-on-cirve",
+    title: "Text On Curve",
+    summary:
+      "Shapes a repeating line of text and adaptively bends its glyph outlines along an editable SVG path, with protection for sharp corners and high-curvature pinches.",
+    technique: "HarfBuzz shaping · arc-length frames · adaptive subdivision",
+    color: "#ff0a78",
+    initials: "TO",
+    tags: ["WebGL", "Skia Ganesh", "Advanced"],
+  },
+  {
     id: "text-cutting",
     title: "Text Cutting",
     summary: "Text shaping demo. Cut a text shape by undulating ribbons, stacked wavy bands.",

@@ -23,12 +23,15 @@ std::string FiddleBase::ExportSvg() {
   if (svg_canvas == nullptr) {
     return {};
   }
+  exporting_svg_ = true;
   DrawFrame(svg_canvas.get(), width, height);
+  exporting_svg_ = false;
   svg_canvas.reset();
 
   sk_sp<SkData> svg_data = stream.detachAsData();
   if (svg_data == nullptr || svg_data->isEmpty()) {
     return {};
   }
-  return {static_cast<const char *>(svg_data->data()), svg_data->size()};
+  return PostProcessSvg(
+      {static_cast<const char *>(svg_data->data()), svg_data->size()});
 }

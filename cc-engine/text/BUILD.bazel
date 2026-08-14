@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,4 +35,25 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [":skia_font_manager"],
+)
+
+cc_library(
+    name = "shaped_text_line",
+    srcs = ["shaped_text_line.cc"],
+    hdrs = ["shaped_text_line.h"],
+    target_compatible_with = select({
+        "//:wasm_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@skia//:core",
+        "@skia//:skparagraph_harfbuzz_skunicode",
+        "@skia//:skunicode_icu",
+    ],
+)
+
+cc_test(
+    name = "shaped_text_normalize_test",
+    srcs = ["shaped_text_line_test.cc"],
+    deps = [":shaped_text_line"],
 )

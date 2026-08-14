@@ -141,3 +141,19 @@ cc_test(
         "@skia//:core",
     ],
 )
+
+cc_library(
+    name = "path_text_deformer",
+    srcs = ["path_text_deformer.cc"],
+    hdrs = ["path_text_deformer.h"],
+    deps = ["@skia//:core"],
+)
+
+cc_test(
+    name = "path_text_deformer_test",
+    srcs = ["path_text_deformer_test.cc"],
+    deps = [
+        ":path_text_deformer",
+        "@skia//:core",
+    ],
+)

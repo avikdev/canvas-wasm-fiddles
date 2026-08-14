@@ -84,8 +84,10 @@ protected:
   double Width() const;
   double Height() const;
   FiddleCanvasResource &CanvasResource();
+  bool IsExportingSvg() const { return exporting_svg_; }
 
   virtual void DrawFrame(SkCanvas *canvas, int width, int height) = 0;
+  virtual std::string PostProcessSvg(std::string svg) const { return svg; }
 
 private:
   void RefreshDimensions();
@@ -95,6 +97,7 @@ private:
   double device_pixel_ratio_ = 1.0;
   double width_ = 1.0;
   double height_ = 1.0;
+  bool exporting_svg_ = false;
 };
 
 class FiddleBaseWebGL : public FiddleBase {
