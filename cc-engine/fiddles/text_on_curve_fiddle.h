@@ -63,5 +63,6 @@ private:
   bool black_text_ = false;
   bool protect_sharp_turns_ = true;
   float sharp_turn_safety_ = 0.80F;
+  float corner_transition_ems_ = 1.5F;
   float subdivision_tolerance_ = 0.35F;
 };

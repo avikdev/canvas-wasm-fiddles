@@ -13,17 +13,23 @@ let {
   paused,
   onSvgWritableChange,
   onControlsChange,
+  onWasmReady,
+  onWasmError,
 }: {
   fiddle?: FiddleId;
   paused: boolean;
   onSvgWritableChange?: (writable: boolean) => void;
   onControlsChange?: (controls: FiddleControlDefinition[]) => void;
+  onWasmReady?: () => void;
+  onWasmError?: (message: string) => void;
 } = $props();
 let canvasElement: HTMLCanvasElement;
 let stageElement: HTMLDivElement;
 let worker: Worker | undefined;
 let supported = $state(true);
 let loading = $state(true);
+let wasmReady = $state(false);
+let workerFiddle: FiddleId | undefined;
 let nextSvgRequestId = 1;
 const pendingSvgRequests = new Map<
   number,
@@ -59,15 +65,19 @@ $effect(() => {
   send({ type: "animation", paused });
 });
 
-onMount(() => {
-  if (!fiddle) {
-    onSvgWritableChange?.(false);
-    return;
-  }
+$effect(() => {
+  const requestedFiddle = fiddle;
+  if (!wasmReady || !worker || !requestedFiddle || requestedFiddle === workerFiddle) return;
+  workerFiddle = requestedFiddle;
+  loading = true;
+  send({ type: "select", fiddle: requestedFiddle });
+});
 
+onMount(() => {
   if (!canvasElement.transferControlToOffscreen) {
     supported = false;
     loading = false;
+    onWasmError?.("This browser does not support OffscreenCanvas.");
     return;
   }
 
@@ -76,7 +86,11 @@ onMount(() => {
     if (event.data.type === "error") {
       console.error(`[canvas-worker] ${event.data.message}`);
     } else if (event.data.type === "ready") {
-      // Do nothing.
+      wasmReady = true;
+      onWasmReady?.();
+    } else if (event.data.type === "initialization-error") {
+      loading = false;
+      onWasmError?.(event.data.message);
     } else if (event.data.type === "first-frame") {
       loading = false;
     } else if (event.data.type === "controls") {
@@ -144,6 +158,7 @@ onMount(() => {
 
   const dimensions = measure();
   rememberDimensions(dimensions);
+  workerFiddle = fiddle;
   send(
     {
       type: "init",
@@ -170,6 +185,8 @@ onMount(() => {
     pendingSvgRequests.clear();
     onSvgWritableChange?.(false);
     onControlsChange?.([]);
+    wasmReady = false;
+    workerFiddle = undefined;
   };
 });
 </script>
@@ -190,10 +207,15 @@ onMount(() => {
       aria-label={fiddle ? "Loading fiddle" : "No fiddle selected"}
     >
       <svg viewBox="0 0 100 100" aria-hidden="true">
-        <rect x="3" y="3" width="94" height="94" rx="3" />
-        <circle cx="50" cy="50" r="26" />
-        <path d="M31.6 31.6 68.4 68.4" />
+        <path d="M30 17h40M30 83h40" />
+        <path d="M35 17v12c0 9 5.5 14.5 15 21-9.5 6.5-15 12-15 21v12" />
+        <path d="M65 17v12c0 9-5.5 14.5-15 21 9.5 6.5 15 12 15 21v12" />
+        <path d="M39 73c3-7 7-10 11-13 4 3 8 6 11 13z" />
       </svg>
+      <div class="blank-fiddle-copy">
+        <p class="blank-fiddle-title">NO OUTPUT</p>
+        <p>Loading output, (select from left panel)</p>
+      </div>
     </div>
   {/if}
   {#if !supported}

@@ -129,11 +129,22 @@ At a sharp join there are two legitimate tangents: incoming and outgoing.
 Switching instantly between their normals produces a seam, while intersecting
 raw offset lines can pinch broad glyph tops into an illegible point.
 
-When the tangent deflection exceeds a threshold (30 degrees by default), the
-implementation uses the normalized tangent bisector. Adjacent adaptively
-subdivided points see overlapping probe windows, producing a compact radial
-transition fan rather than a one-sample normal discontinuity. The same
-inversion cap limits the fan's inner edge.
+When the tangent deflection exceeds a threshold (30 degrees by default), its
+incoming and outgoing angles are unwrapped across the shortest rotation. A
+configurable arc-length interval is centered on the corner, and a cubic
+smoothstep blends between those angles:
+
+```text
+u = clamp((s - (corner - transition / 2)) / transition, 0, 1)
+angle(s) = incomingAngle + shortestTurn * (u*u*(3 - 2*u))
+```
+
+This produces zero angular velocity at both ends and a bounded maximum rate in
+the middle. The point `P(s)` remains on the original guide; only the tangent
+and corresponding normal are smoothed. Expressing the transition in font ems
+makes the visual result scale with the text and remain independent of frame
+rate. A zero transition falls back to the tangent bisector behavior. The same
+inversion cap limits the transition fan's inner edge.
 
 This is a geometric safeguard, not a full font-structure solver. A more
 elaborate system can classify stems, crossbars, and diagonal features, attach a

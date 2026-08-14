@@ -23,6 +23,9 @@ struct PathTextDeformOptions {
   float flatness_tolerance = 0.35F;
   float curvature_probe = 2.0F;
   float corner_angle_threshold_degrees = 30.0F;
+  // Arc-length interval over which a discontinuous corner orientation is
+  // blended. Positions remain on the original guide.
+  float corner_transition_length = 0.0F;
   bool protect_sharp_turns = true;
   // Fraction of the local curvature radius available to inner glyph edges.
   float inversion_safety = 0.80F;
@@ -50,6 +53,9 @@ public:
 private:
   float NormalizeDistance(float distance) const;
   bool RawFrame(float distance, SkPoint *position, SkVector *tangent) const;
+  bool SmoothedCornerTangent(float distance,
+                             const PathTextDeformOptions &options,
+                             SkVector *tangent) const;
 
   SkPath guide_;
   std::unique_ptr<SkPathMeasure> measure_;

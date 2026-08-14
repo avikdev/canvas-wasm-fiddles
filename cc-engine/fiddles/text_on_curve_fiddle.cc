@@ -139,6 +139,14 @@ std::vector<FiddleWidget> TextOnCurveFiddle::Widgets() const {
        0.55,
        0.95,
        0.05},
+      {"corner-transition",
+       "Corner transition length (font ems)",
+       "range",
+       std::to_string(corner_transition_ems_),
+       {},
+       0.0,
+       4.0,
+       0.1},
       {"subdivision-tolerance",
        "Curve subdivision tolerance",
        "range",
@@ -205,6 +213,10 @@ bool TextOnCurveFiddle::SetInput(const std::string &key,
   }
   if (key == "sharp-turn-safety") {
     sharp_turn_safety_ = std::clamp(*parsed, 0.55F, 0.95F);
+    return true;
+  }
+  if (key == "corner-transition") {
+    corner_transition_ems_ = std::clamp(*parsed, 0.0F, 4.0F);
     return true;
   }
   if (key == "subdivision-tolerance") {
@@ -347,6 +359,8 @@ void TextOnCurveFiddle::DrawFrame(SkCanvas *canvas, int width, int /*height*/) {
       std::max(device_scale, effective_font_size_ * 0.22F);
   options.protect_sharp_turns = protect_sharp_turns_;
   options.inversion_safety = sharp_turn_safety_;
+  options.corner_transition_length =
+      corner_transition_ems_ * effective_font_size_;
 
   const float line_advance = shaped_line_.advance;
   const float motion = std::fmod(motion_offset_, line_advance);

@@ -76,6 +76,79 @@ bool PathTextDeformer::RawFrame(float distance, SkPoint *position,
   return true;
 }
 
+bool PathTextDeformer::SmoothedCornerTangent(
+    float distance, const PathTextDeformOptions &options,
+    SkVector *tangent) const {
+  if (tangent == nullptr || options.corner_transition_length <= kEpsilon)
+    return false;
+
+  constexpr int kSearchSegments = 16;
+  const float transition = options.corner_transition_length;
+  const float half_transition = transition * 0.5F;
+  const float threshold = options.corner_angle_threshold_degrees *
+                          std::numbers::pi_v<float> / 180.0F;
+  float strongest_turn = 0.0F;
+  float corner_left = distance - half_transition;
+  float corner_right = corner_left;
+  SkPoint unused_position;
+  SkVector previous_tangent;
+  if (!RawFrame(corner_left, &unused_position, &previous_tangent))
+    return false;
+
+  SkVector incoming = previous_tangent;
+  SkVector outgoing = previous_tangent;
+  for (int sample = 1; sample <= kSearchSegments; ++sample) {
+    const float sample_distance = distance - half_transition +
+                                  transition * static_cast<float>(sample) /
+                                      static_cast<float>(kSearchSegments);
+    SkVector sample_tangent;
+    if (!RawFrame(sample_distance, &unused_position, &sample_tangent))
+      return false;
+    const float turn = std::atan2(Cross(previous_tangent, sample_tangent),
+                                  Dot(previous_tangent, sample_tangent));
+    if (std::abs(turn) > std::abs(strongest_turn)) {
+      strongest_turn = turn;
+      corner_left =
+          sample_distance - transition / static_cast<float>(kSearchSegments);
+      corner_right = sample_distance;
+      incoming = previous_tangent;
+      outgoing = sample_tangent;
+    }
+    previous_tangent = sample_tangent;
+  }
+  if (std::abs(strongest_turn) < threshold)
+    return false;
+
+  // Refine the location of the tangent discontinuity so the transition does
+  // not drift with the search sampling grid.
+  for (int iteration = 0; iteration < 10; ++iteration) {
+    const float middle = (corner_left + corner_right) * 0.5F;
+    SkVector middle_tangent;
+    if (!RawFrame(middle, &unused_position, &middle_tangent))
+      break;
+    const float turn_from_incoming = std::abs(std::atan2(
+        Cross(incoming, middle_tangent), Dot(incoming, middle_tangent)));
+    if (turn_from_incoming >= std::abs(strongest_turn) * 0.5F) {
+      corner_right = middle;
+      outgoing = middle_tangent;
+    } else {
+      corner_left = middle;
+      incoming = middle_tangent;
+    }
+  }
+
+  const float corner = (corner_left + corner_right) * 0.5F;
+  const float progress = std::clamp(
+      (distance - (corner - half_transition)) / transition, 0.0F, 1.0F);
+  const float eased = progress * progress * (3.0F - 2.0F * progress);
+  const float incoming_angle = std::atan2(incoming.fY, incoming.fX);
+  const float corner_turn =
+      std::atan2(Cross(incoming, outgoing), Dot(incoming, outgoing));
+  const float angle = incoming_angle + corner_turn * eased;
+  *tangent = {std::cos(angle), std::sin(angle)};
+  return true;
+}
+
 PathFrame
 PathTextDeformer::FrameAt(float distance,
                           const PathTextDeformOptions &options) const {
@@ -100,7 +173,11 @@ PathTextDeformer::FrameAt(float distance,
   frame.signed_curvature = turn / (2.0F * probe);
   const float threshold = options.corner_angle_threshold_degrees *
                           std::numbers::pi_v<float> / 180.0F;
-  if (options.protect_sharp_turns && std::abs(turn) >= threshold) {
+  if (options.protect_sharp_turns &&
+      SmoothedCornerTangent(distance, options, &frame.tangent)) {
+    // The spatial transition rotates continuously while the baseline position
+    // stays on the original path.
+  } else if (options.protect_sharp_turns && std::abs(turn) >= threshold) {
     // Bisect the incoming/outgoing tangents. Across neighboring samples this
     // creates the transition fan needed at a C0 join instead of switching the
     // glyph normal discontinuously at one point.

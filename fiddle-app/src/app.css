@@ -446,6 +446,36 @@ a {
   padding-bottom: 0;
 }
 
+.wasm-loading {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #626965;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wasm-loading.error {
+  color: #9d2f2f;
+}
+
+.wasm-loading-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgb(23 32 28 / 18%);
+  border-top-color: #f6ad0a;
+  border-radius: 50%;
+  animation: wasm-loading-spin 700ms linear infinite;
+}
+
+@keyframes wasm-loading-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 .fiddle-title-row {
   display: flex;
   align-items: center;
@@ -481,19 +511,44 @@ a {
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: grid;
-  place-items: center;
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 2.5cqh, 20px);
   background: #fff;
+  color: #747a77;
+  font-family: inherit;
+  text-align: center;
 }
 
 .blank-fiddle svg {
-  width: 50%;
-  height: 50%;
+  width: min(50cqw, 50cqh);
+  height: min(50cqw, 50cqh);
+  flex: 0 0 auto;
   fill: none;
   stroke: #a3a7a5;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 5;
+}
+
+.blank-fiddle-copy {
+  display: grid;
+  gap: clamp(3px, 0.8cqh, 7px);
+  font-size: clamp(12px, min(2.2cqw, 2.2cqh), 16px);
+  line-height: 1.25;
+}
+
+.blank-fiddle-copy p {
+  margin: 0;
+}
+
+.blank-fiddle-title {
+  font-size: clamp(14px, min(2.7cqw, 2.7cqh), 20px);
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 .canvas-stage.shape-intersection-stage {

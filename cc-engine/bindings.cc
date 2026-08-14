@@ -12,6 +12,8 @@
 
 namespace {
 
+std::string HealthPing() { return "OIK"; }
+
 bool LoadFont(const std::string &font_id, const emscripten::val &font_bytes) {
   const std::vector<std::uint8_t> bytes =
       emscripten::convertJSArrayToNumberVector<std::uint8_t>(font_bytes);
@@ -58,6 +60,7 @@ EMSCRIPTEN_BINDINGS(CanvasWasmDemo) {
       .field("step", &FiddleWidget::step);
   emscripten::function("loadFont", &LoadFont);
   emscripten::function("loadImageBitmap", &LoadImageBitmap);
+  emscripten::function("healthPing", &HealthPing);
   emscripten::class_<WasmFiddleManager>("FiddleManager")
       .constructor<emscripten::val, const std::string &>()
       .function("selectFiddle", &WasmFiddleManager::SelectFiddle)

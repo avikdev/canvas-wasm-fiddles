@@ -26,6 +26,7 @@ export interface FiddleWidget {
 }
 
 export interface CanvasDemoModule {
+  healthPing(): string;
   loadFont(fontId: string, bytes: Uint8Array): boolean;
   loadImageBitmap(imageId: string, bitmap: ImageBitmap): boolean;
   FiddleManager: {

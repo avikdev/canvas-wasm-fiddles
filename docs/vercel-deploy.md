@@ -46,6 +46,13 @@ Run all commands from the repository root.
    secret must only be consumed by server-side code, such as a Vercel Function;
    the current app has no server-side runtime.
 
+   To enable Google Analytics, add the public GA4 measurement ID and follow
+   the report setup in `docs/google-analytics.md`:
+
+   ```sh
+   bunx vercel env add VITE_GA_MEASUREMENT_ID production
+   ```
+
 ## Build and deploy
 
 Pull the latest production settings and environment variables, build on the

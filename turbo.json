@@ -9,7 +9,7 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "env": ["VITE_BASE_PATH"],
+      "env": ["VITE_BASE_PATH", "VITE_GA_MEASUREMENT_ID"],
       "outputs": ["dist/**"]
     },
     "check": {

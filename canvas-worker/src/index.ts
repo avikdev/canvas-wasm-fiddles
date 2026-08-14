@@ -2,7 +2,7 @@ export type CanvasWorkerMessage =
   | {
       type: "init";
       canvas: OffscreenCanvas;
-      fiddle: string;
+      fiddle?: string;
       assetBaseUrl: string;
       width: number;
       height: number;
@@ -42,6 +42,10 @@ export type CanvasWorkerMessage =
 export type CanvasWorkerStatus =
   | {
       type: "ready";
+    }
+  | {
+      type: "initialization-error";
+      message: string;
     }
   | {
       type: "first-frame";

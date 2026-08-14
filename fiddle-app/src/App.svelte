@@ -3,6 +3,12 @@ import type { FiddleControlDefinition } from "@canvas-wasm-fiddles/canvas-worker
 import { ArrowUpRight, Braces, Menu, Pause, Play, Save, Sparkles } from "lucide-svelte";
 import { onMount } from "svelte";
 import CanvasStage from "./lib/CanvasStage.svelte";
+import {
+  trackFiddleClick,
+  trackFiddleView,
+  trackSvgSave,
+  trackSvgSaveFailure,
+} from "./lib/analytics";
 import { ControlPanel } from "./lib/components/controls";
 import { Button } from "./lib/components/ui/button";
 import { Separator } from "./lib/components/ui/separator";
@@ -11,6 +17,7 @@ import { downloadSvg } from "./lib/svg-download";
 
 let selectedId = $state<FiddleId | undefined>();
 let selected = $derived(fiddles.find((fiddle) => fiddle.id === selectedId));
+let selectedBackend = $derived(selected?.tags.includes("CPU Render") ? "cpu" : "webgl");
 let compactNavigation = $state<boolean>(
   typeof window === "undefined" ? false : window.matchMedia("(max-width: 760px)").matches,
 );
@@ -20,6 +27,8 @@ let animationPaused = $state(false);
 let svgWritable = $state(false);
 let svgSaving = $state(false);
 let controls = $state<FiddleControlDefinition[]>([]);
+let wasmReady = $state(false);
+let wasmInitializationError = $state<string>();
 let canvasStage:
   | {
       exportSvg(): Promise<Blob>;
@@ -27,7 +36,14 @@ let canvasStage:
     }
   | undefined = $state();
 
-function selectFiddle(id: FiddleId) {
+function selectFiddle(id: FiddleId, selectionMethod: "automatic" | "user" = "user") {
+  if (!wasmReady) return;
+  const nextFiddle = fiddles.find((fiddle) => fiddle.id === id);
+  if (!nextFiddle) return;
+  if (selectionMethod === "user") trackFiddleClick(id);
+  if (selectedId !== id) {
+    trackFiddleView(id, nextFiddle.title, selectionMethod);
+  }
   selectedId = id;
   animationPaused = false;
   svgWritable = false;
@@ -37,15 +53,30 @@ function selectFiddle(id: FiddleId) {
   }
 }
 
+function handleWasmReady() {
+  wasmReady = true;
+  wasmInitializationError = undefined;
+  if (selectedId) return;
+  const firstAvailable = fiddles.find((fiddle) => !(fiddle.disabled ?? false));
+  if (firstAvailable) selectFiddle(firstAvailable.id, "automatic");
+}
+
+function handleWasmError(message: string) {
+  wasmReady = false;
+  wasmInitializationError = message;
+}
+
 async function saveSvg() {
   if (!selected || !canvasStage || !animationPaused || !svgWritable || svgSaving) return;
 
   const filename = `${selected.id}-${Math.floor(Date.now() / 1000)}.svg`;
+  trackSvgSave(selected.id);
   svgSaving = true;
   try {
     const blob = await canvasStage.exportSvg();
     downloadSvg(blob, filename);
   } catch (error) {
+    trackSvgSaveFailure(selected.id);
     console.error("Could not save the SVG frame.", error);
   } finally {
     svgSaving = false;
@@ -109,6 +140,7 @@ onMount(() => {
               variant="ghost"
               class="fiddle-link"
               aria-current={selectedId === fiddle.id ? "page" : undefined}
+              disabled={!wasmReady}
               onclick={() => selectFiddle(fiddle.id)}
             >
               <span class="fiddle-icon" style:--fiddle-color={fiddle.color}>
@@ -152,7 +184,16 @@ onMount(() => {
 
     <main class="main-panel">
       <header class="fiddle-header" class:empty={!selected}>
-        {#if selected}
+        {#if !wasmReady}
+          <div class:error={Boolean(wasmInitializationError)} class="wasm-loading" role="status">
+            {#if !wasmInitializationError}<span class="wasm-loading-spinner"></span>{/if}
+            <span>
+              {wasmInitializationError
+                ? "Unable to initialize web-assembly"
+                : "Loading web-assembly ..."}
+            </span>
+          </div>
+        {:else if selected}
           <div class="fiddle-title-row">
             <h2>{selected.title}</h2>
             <div class="fiddle-tags" aria-label="Fiddle tags">
@@ -202,13 +243,15 @@ onMount(() => {
       </header>
 
       <section class="canvas-wrap" aria-live="polite">
-        {#key selectedId ?? "blank"}
+        {#key selectedBackend}
           <CanvasStage
             bind:this={canvasStage}
             fiddle={selectedId}
             paused={animationPaused}
             onSvgWritableChange={(writable) => (svgWritable = writable)}
             onControlsChange={(nextControls) => (controls = nextControls)}
+            onWasmReady={handleWasmReady}
+            onWasmError={handleWasmError}
           />
         {/key}
       </section>

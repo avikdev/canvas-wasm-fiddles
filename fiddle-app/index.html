@@ -15,6 +15,16 @@
 
     <link rel="icon" href="/icon.svg" />
     <title>Canvas Wasm Fiddles</title>
+    <!-- Google Analytics commands are queued here before the application and
+         the asynchronously loaded Google tag are initialized. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      window.gtag =
+        window.gtag ||
+        ((...args) => {
+          window.dataLayer.push(args);
+        });
+    </script>
   </head>
   <body>
     <div id="app"></div>

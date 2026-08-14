@@ -6,7 +6,9 @@ import CreateCanvasDemoModule, { type CanvasDemoModule, type FiddleManager } fro
 
 let fiddleManager: FiddleManager | undefined;
 let wasmModule: CanvasDemoModule | undefined;
-let selectedFiddle = "text-reflow";
+let canvas: OffscreenCanvas | undefined;
+let selectedFiddle: string | undefined;
+let wasmReady = false;
 let width = 1;
 let height = 1;
 let dpr = 1;
@@ -181,32 +183,61 @@ function render(now: number) {
   }
 }
 
+function startRendering() {
+  previousFrameTime = undefined;
+  didReportFirstFrame = false;
+  cancelAnimationFrame(animationFrame);
+  // Draw one initialized frame even when the fiddle starts paused. The
+  // render callback will only schedule another frame when animation is on.
+  animationFrame = requestAnimationFrame(render);
+}
+
+function selectFiddle(fiddle: string) {
+  selectedFiddle = fiddle;
+  if (!wasmReady || !wasmModule || !canvas) return;
+
+  let didSelect = false;
+  if (fiddleManager) {
+    didSelect = fiddleManager.selectFiddle(fiddle);
+  } else {
+    fiddleManager = new wasmModule.FiddleManager(canvas, fiddle);
+    fiddleManager.resize(width, height, dpr);
+    didSelect = true;
+  }
+  reportLog(`Selected ${fiddle}: ${String(didSelect)}`);
+  reportSvgCapability();
+  reportControls();
+  if (didSelect) startRendering();
+}
+
 self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
   const message = event.data;
 
   if (message.type === "init") {
     selectedFiddle = message.fiddle;
+    canvas = message.canvas;
     assetBaseUrl = message.assetBaseUrl;
     width = message.width;
     height = message.height;
     dpr = message.dpr;
     animationPaused = message.paused;
 
-    wasmModule = await createWasmModule();
-    await Promise.all([loadExternalFonts(wasmModule), loadExternalImages(wasmModule)]);
-    fiddleManager?.delete();
-    fiddleManager = new wasmModule.FiddleManager(message.canvas, selectedFiddle);
-    fiddleManager.resize(width, height, dpr);
-    self.postMessage({ type: "ready" });
-    reportSvgCapability();
-    reportControls();
-
-    previousFrameTime = undefined;
-    didReportFirstFrame = false;
-    cancelAnimationFrame(animationFrame);
-    // Draw one initialized frame even when the fiddle starts paused. The
-    // render callback will only schedule another frame when animation is on.
-    animationFrame = requestAnimationFrame(render);
+    try {
+      wasmModule = await createWasmModule();
+      const healthResponse = wasmModule.healthPing();
+      if (healthResponse !== "OIK") {
+        throw new Error(`Unexpected Wasm health response: ${healthResponse}`);
+      }
+      await Promise.all([loadExternalFonts(wasmModule), loadExternalImages(wasmModule)]);
+      wasmReady = true;
+      self.postMessage({ type: "ready" });
+      reportLog("WebAssembly health check passed; fiddles are ready.");
+      if (selectedFiddle) selectFiddle(selectedFiddle);
+    } catch (error) {
+      const message = describeError(error);
+      self.postMessage({ type: "initialization-error", message });
+      reportError(error);
+    }
     return;
   }
 
@@ -257,11 +288,7 @@ self.onmessage = async (event: MessageEvent<CanvasWorkerMessage>) => {
   }
 
   if (message.type === "select") {
-    selectedFiddle = message.fiddle;
-    const didSelect = fiddleManager?.selectFiddle(selectedFiddle);
-    reportLog(`Selected ${selectedFiddle}: ${String(didSelect)}`);
-    reportSvgCapability();
-    reportControls();
+    selectFiddle(message.fiddle);
     return;
   }
 
